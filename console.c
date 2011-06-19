@@ -29,8 +29,8 @@ struct CmdEntry
 
 CmdEntry headMenu[] = {
 	{ "help",     printHelp, 1, "this is printing help"},
-	{ "setangle", setAngle,  2, "setangle <val degre>"},
-	{ "sa",       setAngle,  2, "setangle <val degre>"},
+	{ "setangle", setAngle,  3, "setangle <motIdx> <val degre>"},
+	{ "sa",       setAngle,  3, "setangle <motIdx> <val degre>"},
 	{ NULL,       NULL,      0, NULL},
 };
 
@@ -190,9 +190,11 @@ static int printHelp(uint8 *args[], int argc)
 
 static int setAngle(uint8 *args[], int argc)
 {
-	int angle = atoi(args[1]);
+	int motorIdx = atoi(args[1]);
+	int angle = atoi(args[2]);
+
 	printf("setAngle function %i \r\n", angle);
-	int res = motor_setAngle(angle);
+	int res = motor_setAngle(angle,motorIdx);
 	if (res != SUCCESS)
 	{
 		printf("could not apply requested angle\r\n");
