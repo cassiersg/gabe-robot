@@ -4,6 +4,6 @@
 #include "basic_types.h"
 
 int motor_init(void);
-int motor_setAngle(int angle);
+int motor_setAngle(int angle, int motorIndex);
 
 #endif
