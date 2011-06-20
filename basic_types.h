@@ -1,6 +1,9 @@
 #ifndef BASIC_TYPES_H
 #define BASIC_TYPES_H
 
+
+#include <stdlib.h>  /* needed to get #define NULL 0*/
+
 #define SUCCESS 0
 #define FAILURE -1
 
