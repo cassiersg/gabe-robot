@@ -1,4 +1,5 @@
 #include <plib.h>
+#include <math.h>
 #include "motor_control.h"
 
 
@@ -6,6 +7,8 @@
 #define MIN_DURATION 100 // min wait time
 #define ANGLE_0  3802 // 3.379 msec
 #define ANGLE_90 1818 // 1.616 msec
+
+#define DEGRES(rad) (180*(rad)/M_PI)
 
 
 // motor control command
@@ -45,9 +48,9 @@ int motor_init(void)
 int motor_setAngle(int angle, int motorIndex)
 {
 	int res = SUCCESS;
-	if ((angle >=-20) && (angle <= 110) && (motorIndex>=0) && (motorIndex < MAX_MOTOR))
+	if ((angle >=-50) && (angle <= 50) && (motorIndex>=0) && (motorIndex < MAX_MOTOR))
 	{
-		motorImpulseLengths[motorIndex] = ANGLE_0 + (angle*(ANGLE_90-ANGLE_0))/90 ;
+		motorImpulseLengths[motorIndex] = ANGLE_0 + ((angle+45)*(ANGLE_90-ANGLE_0))/90 ;
 		printf("applying %i\r\n", motorImpulseLengths[motorIndex]);
 	}
 	else
@@ -92,5 +95,20 @@ void __ISR(_TIMER_3_VECTOR, ipl4) Timer3Handler(void)
     // Clear the interrupt flag
 	mT3ClearIntFlag();
 }
+
+int pod_setPosition(int motor1, int motor2, int motor3, int x, int y, int z)
+{
+	/* origine du repere: axe du motor1 */
+	float angle_motor1, angle_motor2, angle_motor3;
+	int lenM2Tip;
+	angle_motor1=DEGRES(atan(x/y));
+	lenM2Tip=sqrt(z*z + sqrt(x*x + y*y)-LEN3);
+	angle_motor3=acos((lenM2Tip*lenM2Tip-LEN1*LEN1-LEN2*LEN2)/(-2*LEN1*LEN2))-135;
+	angle_motor2=acos(z/(sqrt(x*x+y*y)-LEN3))+ acos((LEN2*LEN2-lenM2Tip*lenM2Tip-LEN1*LEN1)/(-2*lenM2Tip*LEN1))-45;
+	if ( motor_setAngle(angle_motor1, motor1)==SUCCESS && motor_setAngle(angle_motor2, motor2)==SUCCESS && motor_setAngle(angle_motor3, motor3)==SUCCESS );
+		return SUCCESS;
+	return FAILURE;
+}
+	
 
 

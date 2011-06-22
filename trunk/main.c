@@ -86,10 +86,20 @@ int main(void)
 
     while(1)
 	{
+		uint32 t0;
+		int i;
 	    // while(mPORTDRead() & 0x0100);		// Wait until button pushed 
 		// while(!(mPORTDRead() & 0x0100));	// Wait until button released 
 		// printf("hello this is the time %i\r\n", getTime()/112500);
         // PORTSetBits(IOPORT_F, BIT_1);	// Turn on LED
-		console_process();
+//		console_process();
+		motor_setAngle(0,0);
+		motor_setAngle(0,1);
+		for(i=-4; i<5; i++) 
+		{
+			t0=time_getTime();
+			while(time_getTime()-t0<800000);
+			motor_setAngle(10*i,1);
+		}
 	}  
 }
