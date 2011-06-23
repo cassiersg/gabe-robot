@@ -96,19 +96,19 @@ void __ISR(_TIMER_3_VECTOR, ipl4) Timer3Handler(void)
 	mT3ClearIntFlag();
 }
 
-int pod_setPosition(int motor1, int motor2, int motor3, int x, int y, int z)
+int pod_setPosition(float x, float y, float z, int motor1, int motor2, int motor3)
 {
-	/* origine du repere: axe du motor1 */
+	/* point demande hors zone possible */
+	if (z<=0 || y<=0 || sqrt(x*x+y*y+z*z)> LEN1+LEN2+LEN3)
+        return FAILURE;
 	float angle_motor1, angle_motor2, angle_motor3;
-	int lenM2Tip;
-	angle_motor1=DEGRES(atan(x/y));
-	lenM2Tip=sqrt(z*z + sqrt(x*x + y*y)-LEN3);
-	angle_motor3=acos((lenM2Tip*lenM2Tip-LEN1*LEN1-LEN2*LEN2)/(-2*LEN1*LEN2))-135;
-	angle_motor2=acos(z/(sqrt(x*x+y*y)-LEN3))+ acos((LEN2*LEN2-lenM2Tip*lenM2Tip-LEN1*LEN1)/(-2*lenM2Tip*LEN1))-45;
-	if ( motor_setAngle(angle_motor1, motor1)==SUCCESS && motor_setAngle(angle_motor2, motor2)==SUCCESS && motor_setAngle(angle_motor3, motor3)==SUCCESS );
+	float lenM2Tip;
+	angle_motor1=DEGRES(atan(x/y)+ANGLE1);
+	lenM2Tip=sqrt(z*z + pow(sqrt(x*x + y*y)-LEN1, 2));
+	angle_motor3=DEGRES(acos((lenM2Tip*lenM2Tip-LEN2*LEN2-LEN3*LEN3)/(-2*LEN2*LEN3)))+ANGLE2;
+	angle_motor2=DEGRES(acos(z/lenM2Tip))+90+ DEGRES(acos((LEN3*LEN3-lenM2Tip*lenM2Tip-LEN2*LEN2)/(-2*lenM2Tip*LEN2)))+ANGLE3;
+	if ( motor_setAngle(angle_motor1, motor1)==SUCCESS && motor_setAngle(angle_motor2, motor2)==SUCCESS && motor_setAngle(angle_motor3, motor3)==SUCCESS )
 		return SUCCESS;
 	return FAILURE;
 }
-	
-
 
