@@ -13,6 +13,7 @@ static int  splitCmd(uint8 *theCmd, uint8 *args[], int maxArg);
 static int  printHelp(uint8 *args[], int argc);
 static void processCmd(uint8 *theCmd, int cmdLen);
 static int  setAngle(uint8 *args[], int argc);
+static int  setPosition(uint8 *args[], int argc);
 
 
 /* cmd entry is the basic element used to 
@@ -28,11 +29,15 @@ struct CmdEntry
 };
 
 CmdEntry headMenu[] = {
-	{ "help",     printHelp, 1, "this is printing help"},
-	{ "setangle", setAngle,  3, "setangle <motIdx> <val degre>"},
-	{ "sa",       setAngle,  3, "setangle <motIdx> <val degre>"},
+	{ "help",        printHelp,   1, "this is printing help"},
+	{ "setangle",    setAngle,    4, "setangle <motIdx> <val degre> <speed °/sec>"},
+	{ "sa",          setAngle,    4, "setangle <motIdx> <val degre> <speed °/sec>"},
+	{ "setposition", setPosition, 6, "setposition <x> <y> <z> <motor1> <motor2> <motot3>"},
 	{ NULL,       NULL,      0, NULL},
 };
+
+/* maximum number of arguments of a function (+1 : name of the function) */
+#define MAX_ARG 7
 
 uint8 theCmd[MAX_CMD_LEN];
 int cmdLen = 0;
@@ -42,7 +47,7 @@ void console_init(int pbClk, int desiredBaudRate)
 {
 	OpenUART2(UART_EN, 					// Module is ON
 	UART_RX_ENABLE | UART_TX_ENABLE,	// Enable TX & RX
-	pbClk/16/desiredBaudRate-1);		// 9600 bps, 8-N-1
+	pbClk/16/desiredBaudRate-1);		// 9600 bps, 8-N-1.
 }
 
 
@@ -143,7 +148,6 @@ static int splitCmd(uint8 *theCmd, uint8 *args[], int maxArg)
 
 static void processCmd(uint8 *theCmd, int cmdLen)
 {
-	#define MAX_ARG 4
 	uint8 *args[MAX_ARG];
 	if (cmdLen > 1)
 	{
@@ -177,7 +181,7 @@ static void processCmd(uint8 *theCmd, int cmdLen)
 		}
 	}
 	// print the shell
-	putsUART2("> ");
+	putsUART2(">>> ");
 }
 
 
@@ -192,9 +196,10 @@ static int setAngle(uint8 *args[], int argc)
 {
 	int motorIdx = atoi(args[1]);
 	int angle = atoi(args[2]);
+	int speed = atoi(args[3]);
 
 	printf("setAngle function %i \r\n", angle);
-	int res = motor_setAngle(angle,motorIdx);
+	int res = motor_setAngle(angle,motorIdx, speed);
 	if (res != SUCCESS)
 	{
 		printf("could not apply requested angle\r\n");
@@ -202,3 +207,18 @@ static int setAngle(uint8 *args[], int argc)
 	return 0;
 }
 
+static int setPosition(uint8 *args[], int argc)
+{
+	float x=atof(args[1]);
+	float y=atof(args[2]);
+	float z=atof(args[3]);
+	float motor1=atof(args[3]);
+	float motor2=atof(args[4]);
+	float motor3=atof(args[5]);
+	
+	printf("setPosition fuction %f %f %f  \r\n", x, y, z);
+	if (pod_setPosition(x, y, z, motor1, motor2, motor3)==SUCCESS)
+		printf("could not apply requested position\r\n");
+	return 0;
+}
+	
