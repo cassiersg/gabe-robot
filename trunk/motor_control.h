@@ -5,7 +5,8 @@
 
 
 int motor_init(void);
-int motor_setAngle(int angle, int motorIndex);
+// speed : °/sec
+int motor_setAngle(int angle, int motorIndex, int speed);
 
 /* ---------- for pod_setPosition ---------- */
 // distance between motor1 and motor2 (mm)
@@ -21,6 +22,11 @@ int motor_setAngle(int angle, int motorIndex);
 #define ANGLE2 -135
 //correction angle motor 2
 #define ANGLE3 -135
+
+//directions motors (-1 or 1)
+#define DIRECTION1 -1 //not defined
+#define DIRECTION2 1
+#define DIRECTION3 -1
 
 /*
 amène l extrémité d une patte au point désigné
