@@ -32,7 +32,7 @@ CmdEntry headMenu[] = {
 	{ "help",        printHelp,   1, "this is printing help"},
 	{ "setangle",    setAngle,    4, "setangle <motIdx> <val degre> <speed °/sec>"},
 	{ "sa",          setAngle,    4, "setangle <motIdx> <val degre> <speed °/sec>"},
-	{ "setposition", setPosition, 6, "setposition <x> <y> <z> <motor1> <motor2> <motot3>"},
+	{ "setposition", setPosition, 7, "setposition <x> <y> <z> <motor1> <motor2> <motot3>"},
 	{ NULL,       NULL,      0, NULL},
 };
 
@@ -209,14 +209,14 @@ static int setAngle(uint8 *args[], int argc)
 
 static int setPosition(uint8 *args[], int argc)
 {
-	float x=atof(args[1]);
-	float y=atof(args[2]);
-	float z=atof(args[3]);
-	float motor1=atof(args[3]);
-	float motor2=atof(args[4]);
-	float motor3=atof(args[5]);
+	int x=atoi(args[1]);
+	int y=atoi(args[2]);
+	int z=atoi(args[3]);
+	int motor1=atoi(args[4]);
+	int motor2=atoi(args[5]);
+	int motor3=atoi(args[6]);
 	
-	printf("setPosition fuction %f %f %f  \r\n", x, y, z);
+	printf("setPosition fuction %i %i %i  \r\n", x, y, z);
 	if (pod_setPosition(x, y, z, motor1, motor2, motor3)==SUCCESS)
 		printf("could not apply requested position\r\n");
 	return 0;
