@@ -98,6 +98,8 @@ int main(void)
 		motor_setAngle(45,1,10);
 		t0=time_getTime();
 		while(time_getTime()-t0<1125000);
+		motor_setAngle(0,0,10);
+		motor_setAngle(0,1,10);
 
 	}  
 }

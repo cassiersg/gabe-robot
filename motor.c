@@ -1,13 +1,14 @@
 #include <plib.h>
+#include <stdio.h>
 #include <math.h>
 #include "motor_control.h"
 
-
-#define SERVO_MIN_PERIOD 20250  // 18 msecs
+#define TICKSPERMS 1125  // 1.125 MHz
+#define SERVO_MIN_PERIOD (1125*18)  // 18 msecs
 #define MIN_DURATION 100 // min wait time
 #define ANGLE_0  3802 // 3.379 msec
 #define ANGLE_90 1818 // 1.616 msec
-#define D_ANGLE_1 ((ANGLE_90-ANGLE_0)/90) // 1°
+#define D_ANGLE_1 ((ANGLE_0-ANGLE_90)/90) // 1°
 
 #define DEGRES(rad) ((rad)*180/M_PI)
 
@@ -15,7 +16,8 @@
 // motor control command
 #define MAX_MOTOR 4
 int motorImpLenFinal[MAX_MOTOR]={ANGLE_0, ANGLE_0, ANGLE_0, ANGLE_0};
-int Dif_ImpLen_PerPeriod[MAX_MOTOR]={D_ANGLE_1, D_ANGLE_1, D_ANGLE_1, D_ANGLE_1};
+int Dif_ImpLen_PerPeriod[MAX_MOTOR]={D_ANGLE_1*90, D_ANGLE_1*90, D_ANGLE_1*90, D_ANGLE_1*90};
+int motorImpulseLengths[MAX_MOTOR] = {ANGLE_0, ANGLE_0, ANGLE_0, ANGLE_0};
 
 
 
@@ -31,9 +33,9 @@ int motor_init(void)
 	PORTSetPinsDigitalOut(IOPORT_D, BIT_5);
     mPORTDClearBits(BIT_5);
 
-	// once the port is correctly configured, start the timer 
+	// once the port is correctly configured, start the timer
 	// and configure the associated interrupt
-	/* Timer 3 is configured to run at 1.125 MHz : 
+	/* Timer 3 is configured to run at 1.125 MHz :
           72MHz/2/32 (we are on Periph clock) /32 (divider)
 	*/
     ConfigIntTimer3(T3_INT_ON | T3_INT_PRIOR_4);
@@ -45,21 +47,30 @@ int motor_init(void)
 int motor_setAngle(int angle, int motorIndex, int speed)
 {
 	int res = SUCCESS;
-	if ((angle >=-50) && (angle <= 50) && (motorIndex>=0) && (motorIndex < MAX_MOTOR))
+	if ((angle >=-45) && (angle <= 45) && (motorIndex>=0) && (motorIndex < MAX_MOTOR))
 	{
 		motorImpLenFinal[motorIndex] = ANGLE_0 + (angle+45)*D_ANGLE_1;
 		//  speed*D_ANGLE_1 => Dif_ImpLen / sec * sec/period <= 18ms/1000
 		Dif_ImpLen_PerPeriod[motorIndex]=speed*D_ANGLE_1*SERVO_MIN_PERIOD/1125/1000;
 		printf("applying %i\r\n", motorImpLenFinal[motorIndex]);
+		if (speed==0)
+			Dif_ImpLen_PerPeriod[motorIndex]=D_ANGLE_1*90;
+		if (motorImpLenFinal[motorIndex]>motorImpulseLengths[motorIndex]) 
+			Dif_ImpLen_PerPeriod[motorIndex]=fabs(Dif_ImpLen_PerPeriod[motorIndex]);
+		else
+			Dif_ImpLen_PerPeriod[motorIndex]=-fabs(Dif_ImpLen_PerPeriod[motorIndex]);
 	}
 	else
+	{
+		printf("angle  %d out of range or motorIndex %d unknown\n", angle, motorIndex);
 		res = FAILURE;
+	}
 	return res;
 }
 
 
 /*
- the motor active period is set by the timer 3. Period are being set after each other. 
+ the motor active period is set by the timer 3. Period are being set after each other.
  Once all motors have been activited, we wait the end of a global period.
  The motor period is automatically adapted before the impulse depending on the speed.
 */
@@ -69,7 +80,6 @@ void __ISR(_TIMER_3_VECTOR, ipl4) Timer3Handler(void)
 	// motor control state
 	static int motorIndex = 0;
 	static int totalDuration = 0;
-	static int motorImpulseLengths[MAX_MOTOR] = {ANGLE_0, ANGLE_0, ANGLE_0, ANGLE_0};
 
     // mPORTDToggleBits(BIT_2);
     #define MOTOR_MASK 0x3C
@@ -89,39 +99,27 @@ void __ISR(_TIMER_3_VECTOR, ipl4) Timer3Handler(void)
 	}
 	else
 	{
-		if (Dif_ImpLen_PerPeriod[motorIndex]==0)
-			duration=motorImpLenFinal[motorIndex];
-		if (motorImpLenFinal[motorIndex]>=motorImpulseLengths[motorIndex])
-		{
-			if (motorImpLenFinal[motorIndex] > motorImpulseLengths[motorIndex]+Dif_ImpLen_PerPeriod[motorIndex])
-				duration = motorImpulseLengths[motorIndex] += Dif_ImpLen_PerPeriod[motorIndex];
-			else
-				duration= motorImpLenFinal[motorIndex];
-		}
+		if (fabs(motorImpLenFinal[motorIndex]-motorImpulseLengths[motorIndex])>fabs(Dif_ImpLen_PerPeriod[motorIndex]))
+			duration = motorImpulseLengths[motorIndex] += Dif_ImpLen_PerPeriod[motorIndex];
 		else
-		{
-			if (motorImpLenFinal[motorIndex] < motorImpulseLengths[motorIndex]-Dif_ImpLen_PerPeriod[motorIndex])
-				duration = motorImpulseLengths[motorIndex] -= Dif_ImpLen_PerPeriod[motorIndex];
-			else
-				duration = motorImpLenFinal[motorIndex];
-		}
+			duration= motorImpLenFinal[motorIndex];
 		motorIndex++;
 		totalDuration += duration;
 	}
-	
+
 	OpenTimer3(T3_ON | T3_PS_1_32, duration);
-	
+
     // Clear the interrupt flag
 	mT3ClearIntFlag();
 }
 
-int pod_setPosition(float x, float y, float z, int motor1, int motor2, int motor3)
+int pod_setPosition(int x, int y, int z, int motor1, int motor2, int motor3)
 {
 	/* point demande hors zone possible */
 	if (z<=0 || y<=0 || sqrt(x*x+y*y+z*z)> LEN1+LEN2+LEN3)
         return FAILURE;
-	float angle_motor1, angle_motor2, angle_motor3;
-	float lenM2Tip;
+	int angle_motor1, angle_motor2, angle_motor3;
+	int lenM2Tip;
 	angle_motor1=DIRECTION1* ( DEGRES(atan(x/y)+ANGLE1) );
 	lenM2Tip=sqrt(z*z + pow(sqrt(x*x + y*y)-LEN1, 2));
 	angle_motor3=DIRECTION3*( DEGRES(acos((lenM2Tip*lenM2Tip-LEN2*LEN2-LEN3*LEN3)/(-2*LEN2*LEN3)))+ANGLE2) ;

@@ -40,7 +40,8 @@ moteur1: croissant vers la droite (en regardant du centre du robot)
 moteur2: position "0" a 45° vers le bas, augmentation vers le haut
 moteur3: position "0" vertical, augmentation vers l exterieur
 !!! y>0 ; z>0
+x, y, z en mm
 */
-int pod_setPosition(float x, float y, float z, int motor1, int motor2, int motor3);
+int pod_setPosition(int x, int y, int z, int motor1, int motor2, int motor3);
 
 #endif
