@@ -7,6 +7,7 @@
 #define SUCCESS 0
 #define FAILURE -1
 
+typedef short int int16;
 typedef unsigned int uint32;
 typedef int int32;
 typedef unsigned char uint8;

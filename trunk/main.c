@@ -53,6 +53,8 @@
 #define DESIRED_BAUDRATE    	(9600)      //The desired BaudRate
 
 
+
+
 int main(void)
 {
 	int i;
@@ -93,16 +95,6 @@ int main(void)
 		// printf("hello this is the time %i\r\n", getTime()/112500);
         // PORTSetBits(IOPORT_F, BIT_1);	// Turn on LED
 		console_process();
-		t0=time_getTime();
-		while(time_getTime()-t0<10*TICKS_PER_SECOND)
-			console_process();
-		motor_setAngle(45,0,20);
-		motor_setAngle(45,1,20);
-		t0=time_getTime();
-		while(time_getTime()-t0<5*TICKS_PER_SECOND)
-			console_process();
-		motor_setAngle(-45,0,20);
-		motor_setAngle(-45,1,20);
-
+		process_move();
 	}  
 }
