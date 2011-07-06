@@ -48,6 +48,7 @@ uint32 time_getTime(void)
     {
         firstTimerVal = ReadTimer2();
         softTime = currentSoftTime;
+
 	    secondTimerVal = ReadTimer2();
 	}
 
