@@ -92,14 +92,17 @@ int main(void)
 		// while(!(mPORTDRead() & 0x0100));	// Wait until button released 
 		// printf("hello this is the time %i\r\n", getTime()/112500);
         // PORTSetBits(IOPORT_F, BIT_1);	// Turn on LED
+		console_process();
 		t0=time_getTime();
-		while(time_getTime()-t0<1125000);
-		motor_setAngle(45,0,10);
-		motor_setAngle(45,1,10);
+		while(time_getTime()-t0<10*TICKS_PER_SECOND)
+			console_process();
+		motor_setAngle(45,0,20);
+		motor_setAngle(45,1,20);
 		t0=time_getTime();
-		while(time_getTime()-t0<1125000);
-		motor_setAngle(0,0,10);
-		motor_setAngle(0,1,10);
+		while(time_getTime()-t0<5*TICKS_PER_SECOND)
+			console_process();
+		motor_setAngle(-45,0,20);
+		motor_setAngle(-45,1,20);
 
 	}  
 }
