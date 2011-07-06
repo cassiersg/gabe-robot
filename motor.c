@@ -39,9 +39,7 @@ int motor_init(void)
           72MHz/2/32 (we are on Periph clock) /32 (divider)
 	*/
     ConfigIntTimer3(T3_INT_ON | T3_INT_PRIOR_4);
-//    OpenTimer3(T3_ON | T3_PS_1_32, SERVO_MIN_PERIOD);
-
-
+    OpenTimer3(T3_ON | T3_PS_1_32, SERVO_MIN_PERIOD);
 }
 
 int motor_setAngle(int angle, int motorIndex, int speed)
