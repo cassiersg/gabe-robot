@@ -47,16 +47,17 @@ int motor_setAngle(int angle, int motorIndex, int speed)
 	int res = SUCCESS;
 	if ((angle >=-45) && (angle <= 45) && (motorIndex>=0) && (motorIndex < MAX_MOTOR))
 	{
-		motorImpLenFinal[motorIndex] = ANGLE_0 + (angle+45)*D_ANGLE_1;
+		int wantedImpulse = ANGLE_0 + (angle+45)*D_ANGLE_1;
 		//  speed*D_ANGLE_1 => Dif_ImpLen / sec * sec/period <= 18ms/1000
 		Dif_ImpLen_PerPeriod[motorIndex]=speed*D_ANGLE_1*SERVO_MIN_PERIOD/1125/1000;
-		printf("applying %i\r\n", motorImpLenFinal[motorIndex]);
+		printf("applying %i\r\n", wantedImpulse);
 		if (speed==0)
 			Dif_ImpLen_PerPeriod[motorIndex]=D_ANGLE_1*90;
-		if (motorImpLenFinal[motorIndex]>motorImpulseLengths[motorIndex]) 
+		if (wantedImpulse>motorImpulseLengths[motorIndex]) 
 			Dif_ImpLen_PerPeriod[motorIndex]=fabs(Dif_ImpLen_PerPeriod[motorIndex]);
 		else
 			Dif_ImpLen_PerPeriod[motorIndex]=-fabs(Dif_ImpLen_PerPeriod[motorIndex]);
+		motorImpLenFinal[motorIndex] = wantedImpulse; /* set this at the end otherwise the speed is updated too late*/
 	}
 	else
 	{
@@ -98,9 +99,11 @@ void __ISR(_TIMER_3_VECTOR, ipl4) Timer3Handler(void)
 	else
 	{
 		if (fabs(motorImpLenFinal[motorIndex]-motorImpulseLengths[motorIndex])>fabs(Dif_ImpLen_PerPeriod[motorIndex]))
-			duration = motorImpulseLengths[motorIndex] += Dif_ImpLen_PerPeriod[motorIndex];
+			motorImpulseLengths[motorIndex] += Dif_ImpLen_PerPeriod[motorIndex];
 		else
-			duration= motorImpLenFinal[motorIndex];
+			motorImpulseLengths[motorIndex] = motorImpLenFinal[motorIndex];
+
+		duration = motorImpulseLengths[motorIndex];
 		motorIndex++;
 		totalDuration += duration;
 	}
