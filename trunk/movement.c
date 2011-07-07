@@ -108,7 +108,7 @@ void process_move(void)
 			else
 			{
 				// enter sub sequence
-				if (moveState.currentStackLevel < MAX_RECURSION)
+				if (moveState.currentStackLevel < (MAX_RECURSION-1))
 				{
 					moveState.currentStackLevel++;
 					
