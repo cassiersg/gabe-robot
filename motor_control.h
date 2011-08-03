@@ -8,13 +8,14 @@ int motor_init(void);
 // speed : °/sec
 int motor_setAngle(int angle, int motorIndex, int speed);
 
+
 /* ---------- for pod_setPosition ---------- */
 // distance between motor1 and motor2 (mm)
-#define LEN1 50
+#define LEN1 0
 // distance between motor2 and motor3 (mm)
-#define LEN2 50
+#define LEN2 55
 //distance between motor3 and the tip (mm)
-#define LEN3 50
+#define LEN3 40
 
 //correction angle motor 1
 #define ANGLE1 0

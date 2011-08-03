@@ -2,7 +2,7 @@
 #include "robot_time.h"
 
 /* we define sequence of movements;
-   A movement is characterized by a possition for each motors and an associated speed. 
+   A movement is characterized by a position for each motors and an associated speed. 
    In the future we could replace individual setting with a pod index 
    a "position" and a time to reach this position for this pod.
 
@@ -10,30 +10,62 @@
 
 #define MAX_MOTOR_CONTROLLED 3
 
+typedef struct Position Position;
+struct Position
+{
+	int x;
+	int y;
+	int z;
+};
+
+typedef union PodPosition PodPosition;
+union PodPosition
+{
+	Position position;
+	int motorAngles[MAX_MOTOR_CONTROLLED];
+};
+
+typedef enum PosEntryType { E_angles = 0 , E_coord_xyz = 1 } PosEntryType;
+
 typedef struct Amov Amov;
 struct Amov
 {
 	int timeInThisState; /* unit is second. -1 indicate end of the sequence */
 	int angleSpeed; /* should be derived from "timeInthisState" but this to be done later on */
-    int motorAngles[MAX_MOTOR_CONTROLLED];
+    PodPosition podPosition;
+	PosEntryType posType;
 };
+// A continuer dans process_move() et Amov
 
 Amov firstSeq[] = {
-	{ 5,   0, { 45,  45,  45}},
-	{ 10, 20, {-45, -45, -45}},
-	{ 5,   0, {  0,   0,   0}},
-	{-1, 0, { 0,  0,  0}},
+	{ 5,   0, { 45,  45,  45}, E_angles },
+	{ 10, 20, {-45, -45, -45}, E_angles },
+	{ 5,   0, {  0,   0,   0}, E_angles },
+	{-1, 0, { 0,  0,  0}, E_angles },
 };
 
 Amov secondSeq[] = {
-	{ 2,   0, { 15,  15,  15}},
-	{ 2,  0, { 30,  30,  30}},
-	{ 2,  0, { 45,  45,  45}},
-	{ 2,  0, { 30,  30,  30}},
-	{ 2,   0, { 15,  15,  15}},
-	{ 2,   0, { 0,  0,  0}},
-	{-1, 0, { 0,  0,  0}},
+	{ 2,   0, { 15,  15,  15}, E_angles },
+	{ 2,  0, { 30,  30,  30}, E_angles },
+	{ 2,  0, { 45,  45,  45}, E_angles },
+	{ 2,  0, { 30,  30,  30}, E_angles },
+	{ 2,   0, { 15,  15,  15}, E_angles },
+	{ 2,   0, { 0,  0,  0}, E_angles },
+	{-1, 0, { 0,  0,  0}, E_angles },
 };
+
+Amov thirdSeq[] = {
+	{ 2, 0, { 0, 0, 0}, E_angles },
+	{ 2, 0, { 45,45, 45}, E_angles },
+	{-1, 0, { 0,  0,  0}, E_angles },
+};
+
+Amov fourthSeq[] = {
+	{ 2, 0, { 0, 55, 40}, E_coord_xyz },
+	{ 2, 0, { 0, 70, 50}, E_coord_xyz },
+	{ 7, 0, { 0, 0, 0}, E_angles },
+	{-1, 0, { 0,  0,  0}, E_angles },
+};	
 
 /* define sequences of sequences
    A sequence entry is a link to sequence of movement. In the future we 
@@ -51,6 +83,7 @@ union SubSeq {
 };
 
 struct SeqEntry
+
 {
 	SeqEntryType entryType;
 	SubSeq       subSeq;  	
@@ -59,9 +92,19 @@ struct SeqEntry
 extern SeqEntry seqEntry2[];
 
 SeqEntry seqEntry[] = {
-	{E_MovSeq,    firstSeq },
-	{E_MovSeq,    secondSeq },
-	{E_lastEntry, NULL },
+{E_MovSeq,    firstSeq },
+{E_MovSeq,    secondSeq },
+{E_lastEntry, NULL },
+};
+
+SeqEntry seqEntry3[] = {
+{E_MovSeq,    thirdSeq },
+{E_lastEntry, NULL },
+};
+
+SeqEntry seqEntry4[] = {
+{E_MovSeq,    fourthSeq },
+{E_lastEntry, NULL },
 };
 
 #define MAX_RECURSION 5
@@ -84,7 +127,7 @@ struct MoveState
 	uint32 nextExitTime;
 };
 
-MoveState moveState = {{{E_SubSeq,seqEntry,0},{0,NULL,0},{0,NULL,0},{0,NULL,0},{0,NULL,0}}, 0, 0};
+MoveState moveState = {{{E_SubSeq,seqEntry4,0},{0,NULL,0},{0,NULL,0},{0,NULL,0},{0,NULL,0}}, 0, 0};
 
 void process_move(void)
 {
@@ -136,12 +179,19 @@ void process_move(void)
 			else
 			{
 				/* command motors */
-				int i;
-				for (i=0; i<MAX_MOTOR_CONTROLLED; i++)
+				if (movp->posType == E_angles)
 				{
-					motor_setAngle(movp->motorAngles[i],i,movp->angleSpeed);
+					int i;
+					for (i=0; i<MAX_MOTOR_CONTROLLED; i++)
+					{
+						motor_setAngle((movp->podPosition.motorAngles)[i],i,movp->angleSpeed);
+					}
 				}
-
+				else
+				{
+					Position *coord = &movp->podPosition.position;
+					pod_setPosition(coord->x, coord->y, coord->z, 0, 1, 2);
+				}
 				/* decide nextTime */
 				moveState.nextExitTime = currentTime + movp->timeInThisState*TICKS_PER_SECOND;
 				/* jum to the next entry */
