@@ -3,12 +3,11 @@
 #include <math.h>
 #include "motor_control.h"
 
-#define TICKSPERMS 1125  // 1.125 MHz
 #define SERVO_MIN_PERIOD (1125*18)  // 18 msecs
 #define MIN_DURATION 100 // min wait time
 #define ANGLE_0  3802 // 3.379 msec
 #define ANGLE_90 1818 // 1.616 msec
-#define D_ANGLE_1 ((ANGLE_0-ANGLE_90)/90) // 1°
+#define D_ANGLE_1 ((ANGLE_90-ANGLE_0)/90) // 1°
 
 #define DEGRES(rad) ((rad)*180/M_PI)
 
@@ -47,7 +46,7 @@ int motor_setAngle(int angle, int motorIndex, int speed)
 	int res = SUCCESS;
 	if ((angle >=-45) && (angle <= 45) && (motorIndex>=0) && (motorIndex < MAX_MOTOR))
 	{
-		int wantedImpulse = ANGLE_0 + (angle+45)*D_ANGLE_1;
+		int wantedImpulse = ANGLE_0 + 45*D_ANGLE_1 + angle*D_ANGLE_1;
 		//  speed*D_ANGLE_1 => Dif_ImpLen / sec * sec/period <= 18ms/1000
 		Dif_ImpLen_PerPeriod[motorIndex]=speed*D_ANGLE_1*SERVO_MIN_PERIOD/1125/1000;
 		printf("applying %i\r\n", wantedImpulse);
@@ -67,6 +66,21 @@ int motor_setAngle(int angle, int motorIndex, int speed)
 	return res;
 }
 
+int pod_setPosition(int x, int y, int z, int motor1, int motor2, int motor3)
+{
+	/* point demande hors zone possible */
+	if (z<=0 || y<=0 || sqrt(x*x+y*y+z*z)> LEN1+LEN2+LEN3)
+        return FAILURE;
+	int angle_motor1, angle_motor2, angle_motor3;
+	int lenM2Tip;
+	angle_motor1=DIRECTION1* ( DEGRES(atan(x/y)+ANGLE1) );
+	lenM2Tip=sqrt(z*z + pow(sqrt(x*x + y*y)-LEN1, 2));
+	angle_motor3=DIRECTION3*( DEGRES(acos((lenM2Tip*lenM2Tip-LEN2*LEN2-LEN3*LEN3)/(-2*LEN2*LEN3)))+ANGLE2) ;
+	angle_motor2=DIRECTION2* ( DEGRES(acos(z/lenM2Tip))+90+ DEGRES(acos((LEN3*LEN3-lenM2Tip*lenM2Tip-LEN2*LEN2)/(-2*lenM2Tip*LEN2)))+ANGLE3 );
+	if ( motor_setAngle(angle_motor1, motor1, 0)==SUCCESS && motor_setAngle(angle_motor2, motor2, 0)==SUCCESS && motor_setAngle(angle_motor3, motor3, 0)==SUCCESS )
+		return SUCCESS;
+	return FAILURE;
+}
 
 /*
  the motor active period is set by the timer 3. Period are being set after each other.
@@ -114,19 +128,4 @@ void __ISR(_TIMER_3_VECTOR, ipl4) Timer3Handler(void)
 	mT3ClearIntFlag();
 }
 
-int pod_setPosition(int x, int y, int z, int motor1, int motor2, int motor3)
-{
-	/* point demande hors zone possible */
-	if (z<=0 || y<=0 || sqrt(x*x+y*y+z*z)> LEN1+LEN2+LEN3)
-        return FAILURE;
-	int angle_motor1, angle_motor2, angle_motor3;
-	int lenM2Tip;
-	angle_motor1=DIRECTION1* ( DEGRES(atan(x/y)+ANGLE1) );
-	lenM2Tip=sqrt(z*z + pow(sqrt(x*x + y*y)-LEN1, 2));
-	angle_motor3=DIRECTION3*( DEGRES(acos((lenM2Tip*lenM2Tip-LEN2*LEN2-LEN3*LEN3)/(-2*LEN2*LEN3)))+ANGLE2) ;
-	angle_motor2=DIRECTION2* ( DEGRES(acos(z/lenM2Tip))+90+ DEGRES(acos((LEN3*LEN3-lenM2Tip*lenM2Tip-LEN2*LEN2)/(-2*lenM2Tip*LEN2)))+ANGLE3 );
-	if ( motor_setAngle(angle_motor1, motor1, 0)==SUCCESS && motor_setAngle(angle_motor2, motor2, 0)==SUCCESS && motor_setAngle(angle_motor3, motor3, 0)==SUCCESS )
-		return SUCCESS;
-	return FAILURE;
-}
 
