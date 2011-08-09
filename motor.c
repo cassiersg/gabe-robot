@@ -1,9 +1,10 @@
 #include <plib.h>
 #include <stdio.h>
 #include <math.h>
+#include "robot_time.h"
 #include "motor_control.h"
 
-#define SERVO_MIN_PERIOD (1125*18)  // 18 msecs
+#define SERVO_MIN_PERIOD (TICKS_PER_MSEC *18)  // 18 msecs
 #define MIN_DURATION 100 // min wait time
 #define ANGLE_0  3802 // 3.379 msec
 #define ANGLE_90 1818 // 1.616 msec
@@ -14,9 +15,9 @@
 
 // motor control command
 #define MAX_MOTOR 4
-int motorImpLenFinal[MAX_MOTOR]={ANGLE_0, ANGLE_0, ANGLE_0, ANGLE_0};
+int motorImpLenFinal[MAX_MOTOR]={ANGLE_0 + D_ANGLE_1*90,ANGLE_0 + D_ANGLE_1*90,ANGLE_0 + D_ANGLE_1*90,ANGLE_0 + D_ANGLE_1*90};
 int Dif_ImpLen_PerPeriod[MAX_MOTOR]={D_ANGLE_1*90, D_ANGLE_1*90, D_ANGLE_1*90, D_ANGLE_1*90};
-int motorImpulseLengths[MAX_MOTOR] = {ANGLE_0, ANGLE_0, ANGLE_0, ANGLE_0};
+int motorImpulseLengths[MAX_MOTOR] = {ANGLE_0 + D_ANGLE_1*90,ANGLE_0 + D_ANGLE_1*90,ANGLE_0 + D_ANGLE_1*90,ANGLE_0 + D_ANGLE_1*90};
 
 
 
