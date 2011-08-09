@@ -3,14 +3,14 @@
 
 /* TIME FUNCTION
    Time is maintained by Timer2. 
-   Timer 2 is configured to run at 1.125 MHz : 72MHz/2/32 (we are on Periph clock) /32 (divider) 
+   Timer 2 is configured to run at 2,25 MHz : 72MHz/32 (we are on Periph clock) /32 (divider) 
    The time is composed as followed : 14 LSB are coming from the timer the upper bits are maintained in SW
    To maintain the upper bits, each time we getn an interrupt (wrap of the 14 bits HW counter; 
    we increase the SW counter by 1.
    We keep have a total of (32+14) bits. Note we could easily keep more time.
 
    Note we get an interrupt every 29 msecs.
-   At 1.1MHz, this allows us to survive more than a year (32 bits give us about 1 hour)
+   At 2,25 MHz, this allows us to survive more than a year (32 bits give us about 1 hour)
    
    One difficulty in the system is that we do not want to return bad time if we get the 
    interrupt during the processing.
