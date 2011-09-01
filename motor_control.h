@@ -2,32 +2,36 @@
 #define MOTOR_CONTROL_H
 
 #include "basic_types.h"
-
+#include "robot_math.h"
 
 int motor_init(void);
-// speed : °/sec
+
+// angles with degrees //speed : °/sec
 int motor_setAngle(int angle, int motorIndex, int speed);
+
+// angles : 8192 = 360° //speed : r_angle/sec
+int m_setAngle(int angle, int motorIndex, int speed);
 
 
 /* ---------- for pod_setPosition ---------- */
 // distance between motor1 and motor2 (mm)
-#define LEN1 0
+#define LEN1 23
 // distance between motor2 and motor3 (mm)
-#define LEN2 55
+#define LEN2 71
 //distance between motor3 and the tip (mm)
-#define LEN3 40
+#define LEN3 80
 
 //correction angle motor 1
-#define ANGLE1 0
+#define ANGLE1 DEG_RANGLE( 0 )
 //correction angle motor 2
-#define ANGLE2 -135
+#define ANGLE2 DEG_RANGLE( -135 )
 //correction angle motor 2
-#define ANGLE3 -135
+#define ANGLE3 DEG_RANGLE( -135 )
 
 //directions motors (-1 or 1)
-#define DIRECTION1 -1 //not defined
-#define DIRECTION2 1
-#define DIRECTION3 -1
+#define DIRECTION1 1 //not defined
+#define DIRECTION2 -1
+#define DIRECTION3 1
 
 /*
 amène l extrémité d une patte au point désigné
