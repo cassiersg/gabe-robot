@@ -24,12 +24,12 @@ int m_setAngle(int angle, int motorIndex, int speed);
 //correction angle motor 1
 #define ANGLE1 DEG_RANGLE( 0 )
 //correction angle motor 2
-#define ANGLE2 DEG_RANGLE( -135 )
-//correction angle motor 2
-#define ANGLE3 DEG_RANGLE( -135 )
+#define ANGLE2 DEG_RANGLE( 150 )
+//correction angle motor 3
+#define ANGLE3 DEG_RANGLE( -70 )
 
 //directions motors (-1 or 1)
-#define DIRECTION1 1 //not defined
+#define DIRECTION1 1 
 #define DIRECTION2 -1
 #define DIRECTION3 1
 
@@ -41,9 +41,9 @@ y: horizontal, vers l'extérieur du robot;
 z: vertical, vers le bas.
 numéros de moteurs: du centre vers l'extrémité de la patte, SELON LE MODELE POSTE : v1
 longueur des segments : LEN1 LEN2 LEN3, centre->extrémité
-moteur1: croissant vers la droite (en regardant du centre du robot)
-moteur2: position "0" a 45° vers le bas, augmentation vers le haut
-moteur3: position "0" vertical, augmentation vers l exterieur
+moteur1: croissant vers la droite (en regardant du centre du robot) ANGLE1 0  DIRECTION1 1
+moteur2: position "0" a 45° vers le bas, augmentation vers le haut  ANGLE2 -135  DIRECTION2 1
+moteur3: position "0" vertical, augmentation vers l exterieur  ANGLE3 -135  DIRECTION3 -1
 !!! y>0 ; z>0
 x, y, z en mm
 */

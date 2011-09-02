@@ -87,6 +87,7 @@ int main(void)
 	// Send 'Hello' message through RS232
     putsUART2("\n*** WELCOME TO THE ROBOT'S WORLD ***\r\n");
     putsUART2("*** Type help is needed ***\r\n");
+	putsUART2(">>> ");
 
     while(1)
 	{

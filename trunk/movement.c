@@ -35,7 +35,6 @@ struct Amov
     PodPosition podPosition;
 	PosEntryType posType;
 };
-// A continuer dans process_move() et Amov
 
 Amov firstSeq[] = {
 	{ 5,   0, { 45,  45,  45}, E_angles },
@@ -61,8 +60,15 @@ Amov thirdSeq[] = {
 };
 
 Amov fourthSeq[] = {
-	{ 2, 0, { 0, 55, 40}, E_coord_xyz },
-	{ 2, 0, { 0, 70, 50}, E_coord_xyz },
+	{ 2, 700, { -50, 80, 55}, E_coord_xyz },
+	{ 1, 700, { -50, 80, 35}, E_coord_xyz },
+	{ 1, 700, { 0, 80, 35}, E_coord_xyz },
+	{ 1, 700, { 50, 80, 35}, E_coord_xyz },
+	{ 1, 700, { 50, 80, 55}, E_coord_xyz },
+	{ 1, 700, { 25, 80, 55}, E_coord_xyz },
+	{ 1, 700, { 0, 80, 55}, E_coord_xyz },
+	{ 1, 700, { -25, 80, 55}, E_coord_xyz },
+	{ 1, 700, { -50, 80, 55}, E_coord_xyz },
 	{ 7, 0, { 0, 0, 0}, E_angles },
 	{-1, 0, { 0,  0,  0}, E_angles },
 };	
