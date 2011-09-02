@@ -15,6 +15,7 @@ static void processCmd(uint8 *theCmd, int cmdLen);
 static int  setAngle(uint8 *args[], int argc);
 static int  setPosition(uint8 *args[], int argc);
 static int msetAngle(uint8 *args[], int argc);
+static int  motors_state(uint8 *args[], int argc);
 
 
 /* cmd entry is the basic element used to
@@ -35,6 +36,7 @@ CmdEntry headMenu[] = {
 	{ "sa",          setAngle,    2, "setangle <motIdx> <val degre> <time ms>"},
 	{ "setposition", setPosition, 8, "setposition <x> <y> <z> <time ms> <motor1> <motor2> <motot3>"},
 	{ "sp",          setPosition, 4, "setposition <x> <y> <z> <time ms> <motor1> <motor2> <motot3>"},
+	{ "mstate",      motors_state,  1, "angles of the motors"},
 	{ "sad",         msetAngle,   4, "setangle <motIdx> <val rangle> <time ms>"},
 	{ NULL,       NULL,      0, NULL},
 };
@@ -191,6 +193,14 @@ static void processCmd(uint8 *theCmd, int cmdLen)
 static int printHelp(uint8 *args[], int argc)
 {
 	printf("this is the main help function \r\n");
+	printf("commands:\r\n\r\n");
+	int i;
+	uint8 *name;
+	for (i=1; headMenu[i].theCmd != NULL; i++)
+	{
+		printf("%s  ", headMenu[i].theCmd);
+		printf("%s\r\n", headMenu[i].theHelp);
+	}
 	return 0;
 }
 
@@ -249,3 +259,9 @@ static int msetAngle(uint8 *args[], int argc)
 	}
 	return 0;
 }
+static int motors_state(uint8 *args[], int argc)
+{
+	printf("motors state:\r\n");
+	show_motors();
+}
+

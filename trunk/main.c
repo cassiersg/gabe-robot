@@ -96,6 +96,6 @@ int main(void)
 		// printf("hello this is the time %i\r\n", getTime()/112500);
         // PORTSetBits(IOPORT_F, BIT_1);	// Turn on LED
 		console_process();
-		process_move();
+//		process_move();
 	}  
 }
