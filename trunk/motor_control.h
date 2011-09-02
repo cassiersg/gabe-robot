@@ -6,11 +6,11 @@
 
 int motor_init(void);
 
-// angles with degrees //speed : °/sec
-int motor_setAngle(int angle, int motorIndex, int speed);
+// angles with degrees //time: ms
+int motor_setAngle(int angle, int motorIndex, uint32 time);
 
-// angles : 8192 = 360° //speed : r_angle/sec
-int m_setAngle(int angle, int motorIndex, int speed);
+// angles : 8192 = 360° //time: ms
+int m_setAngle(int angle, int motorIndex, uint32 time);
 
 
 /* ---------- for pod_setPosition ---------- */
@@ -47,6 +47,6 @@ moteur3: position "0" vertical, augmentation vers l exterieur  ANGLE3 -135  DIRE
 !!! y>0 ; z>0
 x, y, z en mm
 */
-int pod_setPosition(int x, int y, int z, int motor1, int motor2, int motor3);
+int pod_setPosition(int x, int y, int z, int time, int motor1, int motor2, int motor3);
 
 #endif

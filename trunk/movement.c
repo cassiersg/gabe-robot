@@ -31,7 +31,7 @@ typedef struct Amov Amov;
 struct Amov
 {
 	int timeInThisState; /* unit is second. -1 indicate end of the sequence */
-	int angleSpeed; /* should be derived from "timeInthisState" but this to be done later on */
+	int timeToState; /* unit is msec. */
     PodPosition podPosition;
 	PosEntryType posType;
 };
@@ -60,16 +60,16 @@ Amov thirdSeq[] = {
 };
 
 Amov fourthSeq[] = {
-	{ 2, 700, { -50, 80, 55}, E_coord_xyz },
-	{ 1, 700, { -50, 80, 35}, E_coord_xyz },
-	{ 1, 700, { 0, 80, 35}, E_coord_xyz },
-	{ 1, 700, { 50, 80, 35}, E_coord_xyz },
-	{ 1, 700, { 50, 80, 55}, E_coord_xyz },
-	{ 1, 700, { 25, 80, 55}, E_coord_xyz },
-	{ 1, 700, { 0, 80, 55}, E_coord_xyz },
-	{ 1, 700, { -25, 80, 55}, E_coord_xyz },
-	{ 1, 700, { -50, 80, 55}, E_coord_xyz },
-	{ 7, 0, { 0, 0, 0}, E_angles },
+	{ 2, 400, { -50, 80, 55}, E_coord_xyz },
+	{ 0, 400, { -50, 80, 35}, E_coord_xyz },
+	{ 0, 400, { 0, 80, 35}, E_coord_xyz },
+	{ 0, 400, { 50, 80, 35}, E_coord_xyz },
+	{ 0, 400, { 50, 80, 55}, E_coord_xyz },
+	{ 0, 400, { 25, 80, 55}, E_coord_xyz },
+	{ 0, 400, { 0, 80, 55}, E_coord_xyz },
+	{ 0, 400, { -25, 80, 55}, E_coord_xyz },
+	{ 0, 400, { -50, 80, 55}, E_coord_xyz },
+	{ 2, 400, { 0, 0, 0}, E_angles },
 	{-1, 0, { 0,  0,  0}, E_angles },
 };	
 
@@ -190,16 +190,16 @@ void process_move(void)
 					int i;
 					for (i=0; i<MAX_MOTOR_CONTROLLED; i++)
 					{
-						motor_setAngle((movp->podPosition.motorAngles)[i],i,movp->angleSpeed);
+						motor_setAngle((movp->podPosition.motorAngles)[i],i,movp->timeToState);
 					}
 				}
 				else
 				{
 					Position *coord = &movp->podPosition.position;
-					pod_setPosition(coord->x, coord->y, coord->z, 0, 1, 2);
+					pod_setPosition(coord->x, coord->y, coord->z, movp->timeToState, 0, 1, 2);
 				}
 				/* decide nextTime */
-				moveState.nextExitTime = currentTime + movp->timeInThisState*TICKS_PER_SECOND;
+				moveState.nextExitTime = currentTime + movp->timeInThisState*TICKS_PER_SECOND + movp->timeToState*TICKS_PER_MSEC;
 				/* jum to the next entry */
 				seqState->seqIndex++;
 			}
