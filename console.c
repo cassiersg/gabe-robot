@@ -31,16 +31,16 @@ struct CmdEntry
 
 CmdEntry headMenu[] = {
 	{ "help",        printHelp,   1, "this is printing help"},
-	{ "setangle",    setAngle,    4, "setangle <motIdx> <val degre> <speed °/sec>"},
-	{ "sa",          setAngle,    4, "setangle <motIdx> <val degre> <speed °/sec>"},
-	{ "setposition", setPosition, 7, "setposition <x> <y> <z> <motor1> <motor2> <motot3>"},
-	{ "sp",          setPosition, 4, "setposition <x> <y> <z>"},
-	{ "sad",         msetAngle,   4, "setangle <motIdx> <val rangle> <speed °/sec>"},
+	{ "setangle",    setAngle,    4, "setangle <motIdx> <val degre> <time ms>"},
+	{ "sa",          setAngle,    2, "setangle <motIdx> <val degre> <time ms>"},
+	{ "setposition", setPosition, 8, "setposition <x> <y> <z> <time ms> <motor1> <motor2> <motot3>"},
+	{ "sp",          setPosition, 4, "setposition <x> <y> <z> <time ms> <motor1> <motor2> <motot3>"},
+	{ "sad",         msetAngle,   4, "setangle <motIdx> <val rangle> <time ms>"},
 	{ NULL,       NULL,      0, NULL},
 };
 
 /* maximum number of arguments of a function (+1 : name of the function) */
-#define MAX_ARG 7
+#define MAX_ARG 8
 
 uint8 theCmd[MAX_CMD_LEN];
 int cmdLen = 0;
@@ -198,11 +198,14 @@ static int printHelp(uint8 *args[], int argc)
 static int setAngle(uint8 *args[], int argc)
 {
 	int motorIdx = atoi(args[1]);
-	int angle = atoi(args[2]);
-	int speed = atoi(args[3]);
+	int angle=0, time=0;
+	if (argc>2)
+		angle = atoi(args[2]);
+	if (argc>3)
+		time = atoi(args[3]);
 
 	printf("setAngle function %i \r\n", angle);
-	int res = motor_setAngle(angle,motorIdx, speed);
+	int res = motor_setAngle(angle,motorIdx, time);
 	if (res != SUCCESS)
 	{
 		printf("could not apply requested angle\r\n");
@@ -215,21 +218,19 @@ static int setPosition(uint8 *args[], int argc)
 	int x=atoi(args[1]);
 	int y=atoi(args[2]);
 	int z=atoi(args[3]);
-	int motor1, motor2, motor3;
-	if (argc==7)
+	int motor1=0, motor2=1, motor3=2, time=0;
+	if (argc>4)
 	{
-		motor1=atoi(args[4]);
-		motor2=atoi(args[5]);
-		motor3=atoi(args[6]);
+		time = atoi(args[4]);
 	}
-	else
+	if (argc>7)
 	{
-		motor1=0;
-		motor2=1;
-		motor3=2;
+		motor1=atoi(args[5]);
+		motor2=atoi(args[6]);
+		motor3=atoi(args[7]);
 	}
-	printf("setPosition fuction %i %i %i  \r\n", x, y, z);
-	if (pod_setPosition(x, y, z, motor1, motor2, motor3)!=SUCCESS)
+	printf("setPosition fuction %i %i %i, time: %i  \r\n", x, y, z, time);
+	if (pod_setPosition(x, y, z, time, motor1, motor2, motor3)!=SUCCESS)
 		printf("could not apply requested position\r\n");
 	return 0;
 }
