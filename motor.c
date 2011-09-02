@@ -86,6 +86,16 @@ int pod_setPosition(int x, int y, int z, int time, int motor1, int motor2, int m
 		return FAILURE;
 }
 
+void show_motors(void)
+{
+	int angle, i;
+	for (i=0; i<MAX_MOTOR; i++)
+	{
+		angle=RANGLE_DEG(2048*(motorImpulseLengths[i]-ANGLE_0)/D_ANGLE_2048)-45;
+		printf("Motor %i : %i degres\r\n", i, angle);
+	}
+}
+
 /*
  the motor active period is set by the timer 3. Period are being set after each other.
  Once all motors have been activited, we wait the end of a global period.

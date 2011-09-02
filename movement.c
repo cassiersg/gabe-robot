@@ -55,7 +55,7 @@ Amov secondSeq[] = {
 
 Amov thirdSeq[] = {
 	{ 2, 0, { 0, 0, 0}, E_angles },
-	{ 2, 0, { 45,45, 45}, E_angles },
+	{ 2, 0, { 0, 0, 0}, E_angles },
 	{-1, 0, { 0,  0,  0}, E_angles },
 };
 
@@ -133,7 +133,7 @@ struct MoveState
 	uint32 nextExitTime;
 };
 
-MoveState moveState = {{{E_SubSeq,seqEntry4,0},{0,NULL,0},{0,NULL,0},{0,NULL,0},{0,NULL,0}}, 0, 0};
+MoveState moveState = {{{E_SubSeq,seqEntry3,0},{0,NULL,0},{0,NULL,0},{0,NULL,0},{0,NULL,0}}, 0, 0};
 
 void process_move(void)
 {

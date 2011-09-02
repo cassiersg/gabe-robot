@@ -6,6 +6,7 @@
 
 int motor_init(void);
 
+void show_motors(void);
 // angles with degrees //time: ms
 int motor_setAngle(int angle, int motorIndex, uint32 time);
 
@@ -46,6 +47,8 @@ moteur2: position "0" a 45° vers le bas, augmentation vers le haut  ANGLE2 -135 
 moteur3: position "0" vertical, augmentation vers l exterieur  ANGLE3 -135  DIRECTION3 -1
 !!! y>0 ; z>0
 x, y, z en mm
+
+time: seconds from the call of the fuction
 */
 int pod_setPosition(int x, int y, int z, int time, int motor1, int motor2, int motor3);
 
