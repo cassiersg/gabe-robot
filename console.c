@@ -14,10 +14,11 @@ static int  printHelp(uint8 *args[], int argc);
 static void processCmd(uint8 *theCmd, int cmdLen);
 static int  setAngle(uint8 *args[], int argc);
 static int  setPosition(uint8 *args[], int argc);
+static int msetAngle(uint8 *args[], int argc);
 
 
-/* cmd entry is the basic element used to 
-   construct the menu list 
+/* cmd entry is the basic element used to
+   construct the menu list
 */
 typedef struct CmdEntry CmdEntry;
 struct CmdEntry
@@ -33,7 +34,8 @@ CmdEntry headMenu[] = {
 	{ "setangle",    setAngle,    4, "setangle <motIdx> <val degre> <speed °/sec>"},
 	{ "sa",          setAngle,    4, "setangle <motIdx> <val degre> <speed °/sec>"},
 	{ "setposition", setPosition, 7, "setposition <x> <y> <z> <motor1> <motor2> <motot3>"},
-	{"sp",           setPosition, 4, "setposition <x> <y> <z>"},
+	{ "sp",          setPosition, 4, "setposition <x> <y> <z>"},
+	{ "sad",         msetAngle,   4, "setangle <motIdx> <val rangle> <speed °/sec>"},
 	{ NULL,       NULL,      0, NULL},
 };
 
@@ -52,9 +54,9 @@ void console_init(int pbClk, int desiredBaudRate)
 }
 
 
-/* function which verify whether 
+/* function which verify whether
    there is something to do for the console
-   If a command is detected, it will immediately 
+   If a command is detected, it will immediately
    handle the command
 */
 void console_process(void)
@@ -141,7 +143,7 @@ static int splitCmd(uint8 *theCmd, uint8 *args[], int maxArg)
 		{
 			args[nextArg] = &theCmd[idx];
 			nextArg++;
-		}	
+		}
 	}
 	return res;
 }
@@ -213,12 +215,36 @@ static int setPosition(uint8 *args[], int argc)
 	int x=atoi(args[1]);
 	int y=atoi(args[2]);
 	int z=atoi(args[3]);
-	int motor1= argc==4 ? 0 : atoi(args[4]);
-	int motor2= argc==4 ? 1 : atoi(args[5]);
-	int motor3= argc==4 ? 2 : atoi(args[6]);
-	
+	int motor1, motor2, motor3;
+	if (argc==7)
+	{
+		motor1=atoi(args[4]);
+		motor2=atoi(args[5]);
+		motor3=atoi(args[6]);
+	}
+	else
+	{
+		motor1=0;
+		motor2=1;
+		motor3=2;
+	}
 	printf("setPosition fuction %i %i %i  \r\n", x, y, z);
 	if (pod_setPosition(x, y, z, motor1, motor2, motor3)!=SUCCESS)
 		printf("could not apply requested position\r\n");
+	return 0;
+}
+
+static int msetAngle(uint8 *args[], int argc)
+{
+	int motorIdx = atoi(args[1]);
+	int angle = atoi(args[2]);
+	int speed = atoi(args[3]);
+
+	printf("msetAngle function %i \r\n", angle);
+	int res = m_setAngle(angle,motorIdx, speed);
+	if (res != SUCCESS)
+	{
+		printf("could not apply requested angle\r\n");
+	}
 	return 0;
 }
