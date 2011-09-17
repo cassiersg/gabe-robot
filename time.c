@@ -52,7 +52,7 @@ uint32 time_getTime(void)
 	    secondTimerVal = ReadTimer2();
 	}
 
-	return (currentSoftTime<<(TIME_BITS_IN_HW-1))|secondTimerVal;
+	return (currentSoftTime<<TIME_BITS_IN_HW)|secondTimerVal;
 }
 
 void __ISR(_TIMER_2_VECTOR, ipl3) Timer2Handler(void)
