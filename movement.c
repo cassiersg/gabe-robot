@@ -1,5 +1,6 @@
 #include "movement.h"
 #include "robot_time.h"
+#include "historical.h"
 
 /* we define sequence of movements;
    A movement is characterized by a position for each motors and an associated speed. 
@@ -54,8 +55,8 @@ Amov secondSeq[] = {
 };
 
 Amov thirdSeq[] = {
-	{ 2, 0, { 0, 0, 0}, E_angles },
-	{ 2, 0, { 0, 0, 0}, E_angles },
+	{ 2, 40, { -40, 80, 50}, E_coord_xyz },
+	{ 2, 40, { 30, 110, 70}, E_coord_xyz },
 	{-1, 0, { 0,  0,  0}, E_angles },
 };
 
@@ -133,7 +134,7 @@ struct MoveState
 	uint32 nextExitTime;
 };
 
-MoveState moveState = {{{E_SubSeq,seqEntry3,0},{0,NULL,0},{0,NULL,0},{0,NULL,0},{0,NULL,0}}, 0, 0};
+MoveState moveState = {{{E_SubSeq,seqEntry4,0},{0,NULL,0},{0,NULL,0},{0,NULL,0},{0,NULL,0}}, 0, 0};
 
 void process_move(void)
 {
@@ -197,6 +198,7 @@ void process_move(void)
 				{
 					Position *coord = &movp->podPosition.position;
 					pod_setPosition(coord->x, coord->y, coord->z, movp->timeToState, 0, 1, 2);
+					event_save("movement.c, setPosition: x:%i, y:%i, z:%i", coord->x, coord->y, coord->z);
 				}
 				/* decide nextTime */
 				moveState.nextExitTime = currentTime + movp->timeInThisState*TICKS_PER_SECOND + movp->timeToState*TICKS_PER_MSEC;
