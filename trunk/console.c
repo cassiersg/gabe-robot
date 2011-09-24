@@ -3,7 +3,7 @@
 
 /* include interfaces controlled through the console */
 #include "motor_control.h"
-
+#include "historical.h"
 
 /* maximum number of char in one command */
 #define MAX_CMD_LEN 512
@@ -14,8 +14,10 @@ static int  printHelp(uint8 *args[], int argc);
 static void processCmd(uint8 *theCmd, int cmdLen);
 static int  setAngle(uint8 *args[], int argc);
 static int  setPosition(uint8 *args[], int argc);
-static int msetAngle(uint8 *args[], int argc);
+static int  msetAngle(uint8 *args[], int argc);
 static int  motors_state(uint8 *args[], int argc);
+static int  his_setSate(uint8 *args[], int argc);
+static int  historic_show(uint8 *args[], int argc);
 
 
 /* cmd entry is the basic element used to
@@ -31,13 +33,15 @@ struct CmdEntry
 };
 
 CmdEntry headMenu[] = {
-	{ "help",        printHelp,   1, "this is printing help"},
-	{ "setangle",    setAngle,    4, "setangle <motIdx> <val degre> <time ms>"},
-	{ "sa",          setAngle,    2, "setangle <motIdx> <val degre> <time ms>"},
-	{ "setposition", setPosition, 8, "setposition <x> <y> <z> <time ms> <motor1> <motor2> <motot3>"},
-	{ "sp",          setPosition, 4, "setposition <x> <y> <z> <time ms> <motor1> <motor2> <motot3>"},
-	{ "mstate",      motors_state,  1, "angles of the motors"},
-	{ "sad",         msetAngle,   4, "setangle <motIdx> <val rangle> <time ms>"},
+	{ "help",        printHelp,      1, "this is printing help"},
+	{ "setangle",    setAngle,       4, "setangle <motIdx> <val degre> <time ms>"},
+	{ "sa",          setAngle,       2, "setangle <motIdx> <val degre> <time ms>"},
+	{ "setposition", setPosition,    8, "setposition <x> <y> <z> <time ms> <motor1> <motor2> <motot3>"},
+	{ "sp",          setPosition,    4, "setposition <x> <y> <z> <time ms> <motor1> <motor2> <motot3>"},
+	{ "mstate",      motors_state,   1, "angles of the motors"},
+	{ "sad",         msetAngle,      4, "setangle <motIdx> <val rangle> <time ms>"},
+	{ "sstatehis",   his_setSate,    2, "historical set state <state: 0/1>"},
+	{ "histshow",    historic_show,  1, "history of events"},
 	{ NULL,       NULL,      0, NULL},
 };
 
@@ -263,5 +267,21 @@ static int motors_state(uint8 *args[], int argc)
 {
 	printf("motors state:\r\n");
 	show_motors();
+	return 0;
 }
 
+static int  his_setSate(uint8 *args[], int argc)
+{
+	int state = atoi(args[1]);
+	setState_eSave(state);
+	if (state==0)
+		printf("historic state: OFF\r\n");
+	else
+		printf("historic state: ON\r\n");
+	return 0;
+}
+
+static int  historic_show(uint8 *args[], int argc)
+{
+	showHistorical();
+}

@@ -35,6 +35,7 @@
 #include "robot_time.h"
 #include "motor_control.h"
 #include "status_led.h"
+#include "historical.h"
 
 
 // Configuration Bit settings
@@ -76,6 +77,7 @@ int main(void)
 	time_init();
 	status_led_init();
 	motor_init();
+	resetHistory();
 	console_init(pbClk,DESIRED_BAUDRATE);
 
 	// Time delay  => was inside the inital example - do not know why:::
@@ -96,6 +98,6 @@ int main(void)
 		// printf("hello this is the time %i\r\n", getTime()/112500);
         // PORTSetBits(IOPORT_F, BIT_1);	// Turn on LED
 		console_process();
-//		process_move();
+		process_move();
 	}  
 }

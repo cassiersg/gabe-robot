@@ -83,7 +83,10 @@ int pod_setPosition(int x, int y, int z, int time, int motor1, int motor2, int m
 	if ( res1==SUCCESS && res2==SUCCESS && res3==SUCCESS )
 		return SUCCESS;
 	else
+	{
+		printf("setPosition error: x:%i, y:%i, z:%i", x, y, z);
 		return FAILURE;
+	}
 }
 
 void show_motors(void)
@@ -134,6 +137,9 @@ void __ISR(_TIMER_3_VECTOR, ipl4) Timer3Handler(void)
 			numberPeriod_toFinal[motorIndex]--;
 		}
 		duration = motorImpulseLengths[motorIndex];
+		// to save this refresh with historical.h
+		if (numberPeriod_toFinal[motorIndex]!=0)
+			mrefresh_save(motorIndex, duration, numberPeriod_toFinal[motorIndex]);
 		motorIndex++;
 		totalDuration += duration;
 	}

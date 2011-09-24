@@ -4,8 +4,10 @@
 
 #include <stdlib.h>  /* needed to get //#define NULL 0 */
 
-#define SUCCESS 0
+#define SUCCESS  0
 #define FAILURE -1
+#define FALSE    0
+#define TRUE     1
 
 typedef short int int16;
 typedef unsigned short int uint16;
