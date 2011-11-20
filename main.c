@@ -78,6 +78,7 @@ int main(void)
 	status_led_init();
 	motor_init();
 	resetHistory();
+	move_init();
 	console_init(pbClk,DESIRED_BAUDRATE);
 
 	// Time delay  => was inside the inital example - do not know why:::
