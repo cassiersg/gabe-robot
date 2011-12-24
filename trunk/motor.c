@@ -1,5 +1,7 @@
 #include <plib.h>
 #include <stdio.h>
+#include <math.h>
+
 #include "robot_time.h"
 #include "motor_control.h"
 #include "robot_math.h"

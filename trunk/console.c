@@ -1,4 +1,6 @@
 #include <plib.h>
+#include <string.h>
+#include <stdio.h>
 #include "robot_console.h"
 
 /* include interfaces controlled through the console */
@@ -167,7 +169,7 @@ static void processCmd(uint8 *theCmd, int cmdLen)
 		CmdEntry *entry = &headMenu[0];
 		while (entry->theCmd != NULL)
 		{
-			int entryDoesNotMatch = strcasecmp(entry->theCmd, args[0]);
+			int entryDoesNotMatch = strcmp(entry->theCmd, args[0]);
 			if (0==entryDoesNotMatch)
 			{
 				printf("res=%i; arg[0]=%s,arg[1]=%s,arg[2]=%s,arg[3]=%s\r\n",

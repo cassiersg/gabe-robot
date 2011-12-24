@@ -98,6 +98,11 @@ uint16 r_sqrt(uint32 x)
     }
 }
 
+int r_abs(int x)
+{
+	return x<0 ? -x : x;
+}
+
 static int sinCos(int x)
 {
     return r_sqrt(COS_SIN_UNIT*COS_SIN_UNIT-x*x);

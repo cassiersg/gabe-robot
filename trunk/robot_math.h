@@ -22,4 +22,6 @@ int16 r_atan(int x);
 
 uint16 r_sqrt(uint32 x);
 
+int r_abs(int x);
+
 #endif
