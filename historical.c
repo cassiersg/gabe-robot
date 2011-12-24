@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 
 #define N_MREFRESH_SAVED 16
 typedef struct e_Mrefresh e_Mrefresh;
