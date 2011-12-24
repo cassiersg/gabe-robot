@@ -167,7 +167,7 @@ void process_move(void)
 	/* note use int16 iso int32 casting to avoid issues with wrap around */
 	if (currentTime > moveState.nextExitTime)
 	{
-		stackState();
+		//stackState();
 		SeqState *seqState = &moveState.seqStack[moveState.currentStackLevel];
 
 		/* execute the current entry */
@@ -276,7 +276,7 @@ void process_move(void)
 
 		if (goUp)
 		{
-			printf("goUp\r\n");
+			//printf("goUp\r\n");
 			// go one level up - next index. if not possible go back to first entry
 			if (moveState.currentStackLevel == 0)
 			{
