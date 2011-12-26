@@ -5,12 +5,32 @@
 #include "robot_time.h"
 #include "motor_control.h"
 #include "robot_math.h"
+#include "robot_console.h"
 
 #define SERVO_MIN_PERIOD (TICKS_PER_MSEC *18)  // 18 msecs
 #define MIN_DURATION 100 // min wait time
 #define ANGLE_0  3802 // 3.379 msec
 #define ANGLE_2048 1818 // 1.616 msec
 #define D_ANGLE_2048 (ANGLE_2048-ANGLE_0) // 2PI/4
+
+
+
+static int  setAngle(uint8 *args[], int argc);
+static int  setPosition(uint8 *args[], int argc);
+static int  msetAngle(uint8 *args[], int argc);
+static int  motors_state(uint8 *args[], int argc);
+CmdEntry motorConsoleMenu[] = {
+	{ "setangle",    setAngle,       4, "setangle <motIdx> <val degre> <time ms>"},
+	{ "sa",          setAngle,       2, "setangle <motIdx> <val degre> <time ms>"},
+	{ "setposition", setPosition,    8, "setposition <x> <y> <z> <time ms> <motor1> <motor2> <motot3>"},
+	{ "sp",          setPosition,    4, "setposition <x> <y> <z> <time ms> <motor1> <motor2> <motot3>"},
+	{ "mstate",      motors_state,   1, "angles of the motors"},
+	{ "sad",         msetAngle,      4, "setangle <motIdx> <val rangle> <time ms>"},
+	{ NULL,       NULL,      0, NULL},
+};
+
+
+
 
 // motor control command
 #define MAX_MOTOR 4
@@ -38,6 +58,7 @@ int motor_init(void)
 	*/
     ConfigIntTimer3(T3_INT_ON | T3_INT_PRIOR_4);
     OpenTimer3(T3_ON | T3_PS_1_32, SERVO_MIN_PERIOD);
+	console_addCommandsList(motorConsoleMenu);
 }
 
 int motor_setAngle(int angle, int motorIndex, uint32 time)
@@ -150,4 +171,67 @@ void __ISR(_TIMER_3_VECTOR, ipl4) Timer3Handler(void)
 
     // Clear the interrupt flag
 	mT3ClearIntFlag();
+}
+
+
+
+static int setAngle(uint8 *args[], int argc)
+{
+	int motorIdx = atoi(args[1]);
+	int angle=0, time=0;
+	if (argc>2)
+		angle = atoi(args[2]);
+	if (argc>3)
+		time = atoi(args[3]);
+
+	printf("setAngle function %i \r\n", angle);
+	int res = motor_setAngle(angle,motorIdx, time);
+	if (res != SUCCESS)
+	{
+		printf("could not apply requested angle\r\n");
+	}
+	return 0;
+}
+
+static int setPosition(uint8 *args[], int argc)
+{
+	int x=atoi(args[1]);
+	int y=atoi(args[2]);
+	int z=atoi(args[3]);
+	int motor1=0, motor2=1, motor3=2, time=0;
+	if (argc>4)
+	{
+		time = atoi(args[4]);
+	}
+	if (argc>7)
+	{
+		motor1=atoi(args[5]);
+		motor2=atoi(args[6]);
+		motor3=atoi(args[7]);
+	}
+	printf("setPosition fuction %i %i %i, time: %i  \r\n", x, y, z, time);
+	if (pod_setPosition(x, y, z, time, motor1, motor2, motor3)!=SUCCESS)
+		printf("could not apply requested position\r\n");
+	return 0;
+}
+
+static int msetAngle(uint8 *args[], int argc)
+{
+	int motorIdx = atoi(args[1]);
+	int angle = atoi(args[2]);
+	int speed = atoi(args[3]);
+
+	printf("msetAngle function %i \r\n", angle);
+	int res = m_setAngle(angle,motorIdx, speed);
+	if (res != SUCCESS)
+	{
+		printf("could not apply requested angle\r\n");
+	}
+	return 0;
+}
+static int motors_state(uint8 *args[], int argc)
+{
+	printf("motors state:\r\n");
+	show_motors();
+	return 0;
 }

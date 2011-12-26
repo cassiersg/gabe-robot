@@ -74,12 +74,12 @@ int main(void)
     // Enable multi-vector interrupts
     INTEnableSystemMultiVectoredInt();
 
+	console_init(pbClk,DESIRED_BAUDRATE);
 	time_init();
 	status_led_init();
 	motor_init();
-	resetHistory();
+    historical_init();
 	move_init();
-	console_init(pbClk,DESIRED_BAUDRATE);
 
 	// Time delay  => was inside the inital example - do not know why:::
 	i = 512*512;		

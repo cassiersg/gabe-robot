@@ -1,9 +1,10 @@
-#include "historical.h"
-#include "basic_types.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include "historical.h"
+#include "basic_types.h"
+#include "robot_console.h"
 
 #define N_MREFRESH_SAVED 16
 typedef struct e_Mrefresh e_Mrefresh;
@@ -16,6 +17,17 @@ struct e_Mrefresh
 };
 e_Mrefresh m_refresh[N_MREFRESH_SAVED];
 int mRefIdx;
+
+
+static int  his_setSate(uint8 *args[], int argc);
+static int  historic_show(uint8 *args[], int argc);
+CmdEntry histConsoleMenu[] = {
+	{ "sstatehis",   his_setSate,    2, "historical set state <state: 0/1>"},
+	{ "histshow",    historic_show,  1, "history of events"},
+	{ NULL,       NULL,      0, NULL},
+};
+
+
 
 
 #define N_EVENT_SAVED 10
@@ -35,6 +47,13 @@ int eventSave = FALSE;
 
 static int showEvent(int evIdx);
 static int showMrefresh(int mIdx);
+
+void historical_init(void)
+{
+	resetHistory();
+	console_addCommandsList(histConsoleMenu);
+}
+
 
 void resetHistory(void)
 {
@@ -157,4 +176,22 @@ void showHistorical(void)
 		if (evIndex==eventT_idx)
 			ev_state=FALSE;
 	}
+}
+
+
+
+static int  his_setSate(uint8 *args[], int argc)
+{
+	int state = atoi(args[1]);
+	setState_eSave(state);
+	if (state==0)
+		printf("historic state: OFF\r\n");
+	else
+		printf("historic state: ON\r\n");
+	return 0;
+}
+
+static int  historic_show(uint8 *args[], int argc)
+{
+	showHistorical();
 }
