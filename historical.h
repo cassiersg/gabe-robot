@@ -3,6 +3,7 @@
 
 #include "basic_types.h"
 
+void historical_init(void);
 void mrefresh_save(uint8 motorIndex, int impLen, int perToFinal);
 void event_save(uint8 *event, ...);
 

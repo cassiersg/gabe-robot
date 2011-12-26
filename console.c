@@ -3,10 +3,6 @@
 #include <stdio.h>
 #include "robot_console.h"
 
-/* include interfaces controlled through the console */
-#include "motor_control.h"
-#include "historical.h"
-
 /* maximum number of char in one command */
 #define MAX_CMD_LEN 512
 
@@ -14,38 +10,19 @@
 static int  splitCmd(uint8 *theCmd, uint8 *args[], int maxArg);
 static int  printHelp(uint8 *args[], int argc);
 static void processCmd(uint8 *theCmd, int cmdLen);
-static int  setAngle(uint8 *args[], int argc);
-static int  setPosition(uint8 *args[], int argc);
-static int  msetAngle(uint8 *args[], int argc);
-static int  motors_state(uint8 *args[], int argc);
-static int  his_setSate(uint8 *args[], int argc);
-static int  historic_show(uint8 *args[], int argc);
+
 
 
 /* cmd entry is the basic element used to
    construct the menu list
 */
-typedef struct CmdEntry CmdEntry;
-struct CmdEntry
-{
-	uint8 *theCmd;
-	int (*processingFunction)(uint8 *args[], int argc);
-	uint8 minArgs;
-	uint8 *theHelp;
-};
-
-CmdEntry headMenu[] = {
+CmdEntry localMenu[] = {
 	{ "help",        printHelp,      1, "this is printing help"},
-	{ "setangle",    setAngle,       4, "setangle <motIdx> <val degre> <time ms>"},
-	{ "sa",          setAngle,       2, "setangle <motIdx> <val degre> <time ms>"},
-	{ "setposition", setPosition,    8, "setposition <x> <y> <z> <time ms> <motor1> <motor2> <motot3>"},
-	{ "sp",          setPosition,    4, "setposition <x> <y> <z> <time ms> <motor1> <motor2> <motot3>"},
-	{ "mstate",      motors_state,   1, "angles of the motors"},
-	{ "sad",         msetAngle,      4, "setangle <motIdx> <val rangle> <time ms>"},
-	{ "sstatehis",   his_setSate,    2, "historical set state <state: 0/1>"},
-	{ "histshow",    historic_show,  1, "history of events"},
 	{ NULL,       NULL,      0, NULL},
 };
+CmdEntry *headMenu[MAX_COMMAND_LIST];
+int numberOfMenu = 0;
+
 
 /* maximum number of arguments of a function (+1 : name of the function) */
 #define MAX_ARG 8
@@ -56,9 +33,20 @@ int totalStr = 0;
 
 void console_init(int pbClk, int desiredBaudRate)
 {
-	OpenUART2(UART_EN, 					// Module is ON
-	UART_RX_ENABLE | UART_TX_ENABLE,	// Enable TX & RX
-	pbClk/16/desiredBaudRate-1);		// 9600 bps, 8-N-1.
+	// Module is ON, Enable TX & RX, baudrate is determined by the caller, 8-N-1
+	OpenUART2(UART_EN, UART_RX_ENABLE | UART_TX_ENABLE, pbClk/16/desiredBaudRate-1);		
+	console_addCommandsList(localMenu);
+}
+
+// add a list of command to process. Each list is terminated by an entry where theCmd is NULL
+void console_addCommandsList(CmdEntry *cmdList)
+{
+	if (numberOfMenu < MAX_COMMAND_LIST)
+		headMenu[numberOfMenu++] = cmdList;
+	else
+	{
+		printf("Error: too many command list\n");
+	}
 }
 
 
@@ -166,24 +154,31 @@ static void processCmd(uint8 *theCmd, int cmdLen)
 		int res = splitCmd(theCmd, args, MAX_ARG);
 
 		// go through the menu list and select the right entry
-		CmdEntry *entry = &headMenu[0];
-		while (entry->theCmd != NULL)
+		
+        int i;
+		int notFound = 1;
+		CmdEntry *entry = NULL;
+		for (i=0;(i<numberOfMenu) && (notFound);i++)
 		{
-			int entryDoesNotMatch = strcmp(entry->theCmd, args[0]);
-			if (0==entryDoesNotMatch)
+			entry = headMenu[i];
+			while ((entry->theCmd != NULL) && notFound)
 			{
-				printf("res=%i; arg[0]=%s,arg[1]=%s,arg[2]=%s,arg[3]=%s\r\n",
-				   res,args[0],args[1],args[2],args[3]);
-
-				if (res >= entry->minArgs)
-					(entry->processingFunction)(args, res);
-				else
-					printf("too few args for %s : %s\r\n", args[0], entry->theHelp);
-				break;
+				int entryDoesNotMatch = strcmp(entry->theCmd, args[0]);
+				if (0==entryDoesNotMatch)
+				{
+					notFound = 0; // we found en entry
+					printf("res=%i; arg[0]=%s,arg[1]=%s,arg[2]=%s,arg[3]=%s\r\n",
+				   		res,args[0],args[1],args[2],args[3]);
+					if (res >= entry->minArgs)
+						(entry->processingFunction)(args, res);
+					else
+						printf("too few args for %s : %s\r\n", args[0], entry->theHelp);
+					break;
+				}
+				entry++;
 			}
-			entry++;
 		}
-		if (entry->theCmd == NULL)
+		if ((entry == NULL) || (entry->theCmd == NULL))
 		{
 			// we did not found an valid entry
 			printf("INVALID CMD REC: [%s]\r\n", theCmd);
@@ -200,90 +195,22 @@ static int printHelp(uint8 *args[], int argc)
 {
 	printf("this is the main help function \r\n");
 	printf("commands:\r\n\r\n");
-	int i;
-	uint8 *name;
-	for (i=1; headMenu[i].theCmd != NULL; i++)
+	int i,j;
+	for (i=0; i<numberOfMenu;i++)
 	{
-		printf("%s  ", headMenu[i].theCmd);
-		printf("%s\r\n", headMenu[i].theHelp);
+		CmdEntry *menu = headMenu[i];
+		for (j=0; menu[j].theCmd != NULL; j++)
+		{
+			printf("%s  ", menu[j].theCmd);
+			int k = strlen(menu[j].theCmd);
+			while (12-k >0)
+			{
+				k++;
+				printf(" ");
+			}
+			printf("%s\r\n", menu[j].theHelp);
+		}
 	}
 	return 0;
 }
 
-
-static int setAngle(uint8 *args[], int argc)
-{
-	int motorIdx = atoi(args[1]);
-	int angle=0, time=0;
-	if (argc>2)
-		angle = atoi(args[2]);
-	if (argc>3)
-		time = atoi(args[3]);
-
-	printf("setAngle function %i \r\n", angle);
-	int res = motor_setAngle(angle,motorIdx, time);
-	if (res != SUCCESS)
-	{
-		printf("could not apply requested angle\r\n");
-	}
-	return 0;
-}
-
-static int setPosition(uint8 *args[], int argc)
-{
-	int x=atoi(args[1]);
-	int y=atoi(args[2]);
-	int z=atoi(args[3]);
-	int motor1=0, motor2=1, motor3=2, time=0;
-	if (argc>4)
-	{
-		time = atoi(args[4]);
-	}
-	if (argc>7)
-	{
-		motor1=atoi(args[5]);
-		motor2=atoi(args[6]);
-		motor3=atoi(args[7]);
-	}
-	printf("setPosition fuction %i %i %i, time: %i  \r\n", x, y, z, time);
-	if (pod_setPosition(x, y, z, time, motor1, motor2, motor3)!=SUCCESS)
-		printf("could not apply requested position\r\n");
-	return 0;
-}
-
-static int msetAngle(uint8 *args[], int argc)
-{
-	int motorIdx = atoi(args[1]);
-	int angle = atoi(args[2]);
-	int speed = atoi(args[3]);
-
-	printf("msetAngle function %i \r\n", angle);
-	int res = m_setAngle(angle,motorIdx, speed);
-	if (res != SUCCESS)
-	{
-		printf("could not apply requested angle\r\n");
-	}
-	return 0;
-}
-static int motors_state(uint8 *args[], int argc)
-{
-	printf("motors state:\r\n");
-	show_motors();
-	return 0;
-}
-
-static int  his_setSate(uint8 *args[], int argc)
-{
-	int state = atoi(args[1]);
-	setState_eSave(state);
-	if (state==0)
-		printf("historic state: OFF\r\n");
-	else
-		printf("historic state: ON\r\n");
-	return 0;
-}
-
-static int  historic_show(uint8 *args[], int argc)
-{
-	showHistorical();
-}
