@@ -8,10 +8,10 @@
 #include "robot_console.h"
 
 #define SERVO_MIN_PERIOD (TICKS_PER_MSEC *18)  // 18 msecs
-#define MIN_DURATION 100 // min wait time
-#define ANGLE_0  3802 // 3.379 msec
-#define ANGLE_2048 1818 // 1.616 msec
-#define D_ANGLE_2048 (ANGLE_2048-ANGLE_0) // 2PI/4
+#define MIN_DURATION     100 // min wait time
+#define ANGLE_0          3802 // 3.379 msec
+#define ANGLE_RPI2       1818 // 1.616 msec
+#define D_ANGLE_RPI2     (ANGLE_RPI2-ANGLE_0) // 2PI/4
 
 
 
@@ -34,8 +34,8 @@ CmdEntry motorConsoleMenu[] = {
 
 // motor control command
 #define MAX_MOTOR 4
-int motorImpLenFinal[MAX_MOTOR]={ANGLE_0 + D_ANGLE_2048/2,ANGLE_0 + D_ANGLE_2048/2,ANGLE_0 + D_ANGLE_2048/2,ANGLE_0 + D_ANGLE_2048/2};
-int motorImpulseLengths[MAX_MOTOR] = {ANGLE_0 + D_ANGLE_2048/2,ANGLE_0 + D_ANGLE_2048/2,ANGLE_0 + D_ANGLE_2048/2,ANGLE_0 + D_ANGLE_2048/2};
+int motorImpLenFinal[MAX_MOTOR]={ANGLE_0 + D_ANGLE_RPI2/2,ANGLE_0 + D_ANGLE_RPI2/2,ANGLE_0 + D_ANGLE_RPI2/2,ANGLE_0 + D_ANGLE_RPI2/2};
+int motorImpulseLengths[MAX_MOTOR] = {ANGLE_0 + D_ANGLE_RPI2/2,ANGLE_0 + D_ANGLE_RPI2/2,ANGLE_0 + D_ANGLE_RPI2/2,ANGLE_0 + D_ANGLE_RPI2/2};
 int numberPeriod_toFinal[MAX_MOTOR] = { 0, 0, 0, 0};
 
 
@@ -70,9 +70,9 @@ int motor_setAngle(int angle, int motorIndex, uint32 time)
 int m_setAngle(int angle, int motorIndex, uint32 time)
 {
 	int res = SUCCESS;
-	if ((angle >=-1024) && (angle <= 1024) && (motorIndex>=0) && (motorIndex < MAX_MOTOR))
+	if ((angle >=-RANGLE_PI4) && (angle <= RANGLE_PI4) && (motorIndex>=0) && (motorIndex < MAX_MOTOR))
 	{
-	    int wantedImpulse = ANGLE_0 + (1024+angle)*D_ANGLE_2048/2048 ;
+	    int wantedImpulse = ANGLE_0 + (RANGLE_PI4+angle)*D_ANGLE_RPI2/RANGLE_PI2;
 		numberPeriod_toFinal[motorIndex] = time*TICKS_PER_MSEC/SERVO_MIN_PERIOD +1;
 		motorImpLenFinal[motorIndex] = wantedImpulse;
 	}
@@ -87,19 +87,32 @@ int m_setAngle(int angle, int motorIndex, uint32 time)
 int pod_setPosition(int x, int y, int z, int time, int motor1, int motor2, int motor3)
 {
 	/* point demande hors zone possible */
-	if (z<=0 || y<=0 || r_sqrt(x*x+y*y+z*z)> LEN1+LEN2+LEN3)
+	if (r_sqrt(x*x+y*y+z*z)> LEN1+LEN2+LEN3)
         return FAILURE;
 	int lenM2Tip= r_sqrt(z*z + pow(r_sqrt(x*x + y*y)-LEN1, 2));
-	int angle_motor1=DIRECTION1* (r_atan((x<<12)/y)+ANGLE1);
-	int angle_motor3=DIRECTION3*( r_acos(((lenM2Tip*lenM2Tip-LEN2*LEN2-LEN3*LEN3)<<12)/(-2*LEN2*LEN3))+ANGLE3);
-	int angle_motor2=DIRECTION2* ( r_acos((z<<12)/lenM2Tip)+2048+ r_acos(((LEN3*LEN3-lenM2Tip*lenM2Tip-LEN2*LEN2)<<12)/(-2*lenM2Tip*LEN2))+ANGLE2 );
+	if (lenM2Tip==0)
+	{
+		printf("setPosition error: x:%i, y:%i, z:%i (lenM2Tip=0)\r\n", x, y, z);
+		return FAILURE;
+	}
+	int angle_motor1;
+	if (y==0)
+	{
+		angle_motor1=DIRECTION1*ANGLE1;
+	}
+	else
+	{
+		angle_motor1 = DIRECTION1 * (r_atanD(x, y) + ANGLE1);
+	}
+	int angle_motor3 = DIRECTION3 * (r_acosD(lenM2Tip*lenM2Tip-LEN2*LEN2-LEN3*LEN3, -2*LEN2*LEN3)+ANGLE3);
+	int angle_motor2 = DIRECTION2 * (r_acosD(z, lenM2Tip) + 2048 + r_acosD(LEN3*LEN3-lenM2Tip*lenM2Tip-LEN2*LEN2, -2*lenM2Tip*LEN2) +ANGLE2);
 	//printf("pod_setPosition: lenM2Tip: %i; angle1: %i; angle2: %i; angle3: %i\r\n", lenM2Tip, angle_motor1, angle_motor2, angle_motor3);
-    while (angle_motor1>7168)  angle_motor1-=8192;
-	while (angle_motor1<-7168) angle_motor1+=8192;
-	while (angle_motor2>7168)  angle_motor2-=8192;
-	while (angle_motor2<-7168) angle_motor2+=8192;
-	while (angle_motor3>7168)  angle_motor3-=8192;
-	while (angle_motor3<-7168) angle_motor3+=8192;
+    while (angle_motor1 >  (ANGLE_UNIT-RANGLE_PI4)) angle_motor1-=ANGLE_UNIT;
+	while (angle_motor1 < -(ANGLE_UNIT-RANGLE_PI4)) angle_motor1+=ANGLE_UNIT;
+	while (angle_motor2 >  (ANGLE_UNIT-RANGLE_PI4)) angle_motor2-=ANGLE_UNIT;
+	while (angle_motor2 < -(ANGLE_UNIT-RANGLE_PI4)) angle_motor2+=ANGLE_UNIT;
+	while (angle_motor3 >  (ANGLE_UNIT-RANGLE_PI4)) angle_motor3-=ANGLE_UNIT;
+	while (angle_motor3 < -(ANGLE_UNIT-RANGLE_PI4)) angle_motor3+=ANGLE_UNIT;
 	int res1 = m_setAngle(angle_motor1, motor1, time);
 	int res2 = m_setAngle(angle_motor2, motor2, time);
 	int res3 = m_setAngle(angle_motor3, motor3, time);
@@ -107,7 +120,7 @@ int pod_setPosition(int x, int y, int z, int time, int motor1, int motor2, int m
 		return SUCCESS;
 	else
 	{
-		printf("setPosition error: x:%i, y:%i, z:%i", x, y, z);
+		printf("setPosition error: x:%i, y:%i, z:%i\r\n", x, y, z);
 		return FAILURE;
 	}
 }
@@ -117,7 +130,7 @@ void show_motors(void)
 	int angle, i;
 	for (i=0; i<MAX_MOTOR; i++)
 	{
-		angle=RANGLE_DEG(2048*(motorImpulseLengths[i]-ANGLE_0)/D_ANGLE_2048)-45;
+		angle=RANGLE_DEG(RANGLE_PI2*(motorImpulseLengths[i]-ANGLE_0)/D_ANGLE_RPI2)-45;
 		printf("Motor %i : %i degres\r\n", i, angle);
 	}
 }
@@ -198,7 +211,7 @@ static int setPosition(uint8 *args[], int argc)
 	int x=atoi(args[1]);
 	int y=atoi(args[2]);
 	int z=atoi(args[3]);
-	int motor1=0, motor2=1, motor3=2, time=0;
+	int motor1=0, motor2=1, motor3=2, time=500;
 	if (argc>4)
 	{
 		time = atoi(args[4]);

@@ -1,79 +1,23 @@
 #include "robot_math.h"
+#include <math.h>
 
-/*r_asin, r_acos and r_atan can be negative in order to exprees FAILURE */
-
-#define COS_SIN_BITS 12
-#define TANGENT_BITS 12
-#define ANGLE_BITS   13
-
-#define COS_SIN_UNIT (1<<COS_SIN_BITS) // 4096
-#define TANGENT_UNIT (1<<TANGENT_BITS) // 4096
-#define ANGLE_UNIT   (1<<ANGLE_BITS)   // 8192
-
-#define SIN_PI4 ((46400*COS_SIN_UNIT)>>16)  // 46400.0>>16 *2*PI >= sin(pi/4)
+#define RAD_RANGLE(rad) (rad/2/M_PI*ANGLE_UNIT)
 
 static int sinCos(int x);
 
-int16 r_asin(int x)
+int16 r_asinD(int x, int y)
 {
-    if (x>COS_SIN_UNIT || x< -COS_SIN_UNIT)
-        return FAILURE;
-    else
-    {
-        if (x>SIN_PI4 || x<-SIN_PI4)
-        {
-            return x<0 ? r_asin(sinCos(x))-ANGLE_UNIT/4 : ANGLE_UNIT/4-r_asin(sinCos(x));
-        }
-        else
-        {
-            int x_square = (x*x)>>COS_SIN_BITS;
-            int i = 1;
-            int coeff = 1<<COS_SIN_BITS;
-            int res = 1<<COS_SIN_BITS;
-            for (; i<7; i++)
-            {
-                coeff*= (x_square * (2*i-1)) / (2*i);
-                coeff = coeff>>COS_SIN_BITS;
-                res+= coeff / (2*i+1);
-            }
-            res = (res*x)>>COS_SIN_BITS;
-            res = ((res<<16) / (R_PIB16));
-            return res;
-        }
-    }
+	return (int)RAD_RANGLE(asin(((float)x)/y));
 }
 
-int16 r_acos(int x)
+int16 r_acosD(int x, int y)
 {
-   if (x>COS_SIN_UNIT || x< -COS_SIN_UNIT)
-        return FAILURE;
-    else
-    {
-        int angle = ANGLE_UNIT/4 - r_asin(x);
-        return angle;
-    }
+	return (int)RAD_RANGLE(acos(((float)x)/y));
 }
 
-int16 r_atan(int x)
+int16 r_atanD(int x, int y)
 {
-    if (x < -TANGENT_UNIT || x > TANGENT_UNIT)
-        return FAILURE;
-    else
-    {
-        int x_square = (x*x)>>TANGENT_BITS;
-        int coeff = 1<<TANGENT_BITS;
-        int res = 1<<TANGENT_BITS;
-        int i = 1;
-        for (;i<20; i++)
-        {
-            coeff*= x_square;
-            coeff = -(coeff>>TANGENT_BITS);
-            res+= coeff / (2*i+1);
-        }
-        res = (res*x)>>TANGENT_BITS;
-        res = ( (res<<16) / (R_PIB16) );
-        return res;
-    }
+	return (int)RAD_RANGLE(atan(((float)x)/y));
 }
 
 uint16 r_sqrt(uint32 x)
@@ -96,14 +40,4 @@ uint16 r_sqrt(uint32 x)
         }
         return val1;
     }
-}
-
-int r_abs(int x)
-{
-	return x<0 ? -x : x;
-}
-
-static int sinCos(int x)
-{
-    return r_sqrt(COS_SIN_UNIT*COS_SIN_UNIT-x*x);
 }
