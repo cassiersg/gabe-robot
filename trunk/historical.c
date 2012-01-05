@@ -6,6 +6,19 @@
 #include "basic_types.h"
 #include "robot_console.h"
 
+
+static int  his_setSate(uint8 *args[], int argc);
+static int  historic_show(uint8 *args[], int argc);
+CmdEntry histConsoleMenu[] = {
+	{ "sstatehis",   his_setSate,    2, "historical set state <state: 0/1>"},
+	{ "histshow",    historic_show,  1, "history of events"},
+	{ NULL,       NULL,      0, NULL},
+};
+
+static int showEvent(int evIdx);
+static int showMrefresh(int mIdx);
+
+/*historic of motor refresh*/
 #define N_MREFRESH_SAVED 16
 typedef struct e_Mrefresh e_Mrefresh;
 struct e_Mrefresh
@@ -18,18 +31,7 @@ struct e_Mrefresh
 e_Mrefresh m_refresh[N_MREFRESH_SAVED];
 int mRefIdx;
 
-
-static int  his_setSate(uint8 *args[], int argc);
-static int  historic_show(uint8 *args[], int argc);
-CmdEntry histConsoleMenu[] = {
-	{ "sstatehis",   his_setSate,    2, "historical set state <state: 0/1>"},
-	{ "histshow",    historic_show,  1, "history of events"},
-	{ NULL,       NULL,      0, NULL},
-};
-
-
-
-
+/*historic of other events*/
 #define N_EVENT_SAVED 10
 #define E_STRLEN 50
 #define PAR_NUM 4
@@ -45,8 +47,6 @@ int eventT_idx;
 
 int eventSave = FALSE;
 
-static int showEvent(int evIdx);
-static int showMrefresh(int mIdx);
 
 void historical_init(void)
 {
