@@ -9,7 +9,7 @@
 
 #define SERVO_MIN_PERIOD (TICKS_PER_MSEC *18)  // 18 msecs
 #define MIN_DURATION     100 // min wait time
-#define ANGLE_0          3802 // 3.379 msec
+#define ANGLE_0          3720 // 3.307 msec
 #define ANGLE_RPI2       1818 // 1.616 msec
 #define D_ANGLE_RPI2     (ANGLE_RPI2-ANGLE_0) // 2PI/4
 
@@ -70,7 +70,7 @@ int motor_setAngle(int angle, int motorIndex, uint32 time)
 int m_setAngle(int angle, int motorIndex, uint32 time)
 {
 	int res = SUCCESS;
-	if ((angle >=-RANGLE_PI4) && (angle <= RANGLE_PI4) && (motorIndex>=0) && (motorIndex < MAX_MOTOR))
+	if ((angle >= -ANGLE_UNIT*50/360) && (angle <= ANGLE_UNIT*50/360) && (motorIndex>=0) && (motorIndex < MAX_MOTOR))
 	{
 	    int wantedImpulse = ANGLE_0 + (RANGLE_PI4+angle)*D_ANGLE_RPI2/RANGLE_PI2;
 		numberPeriod_toFinal[motorIndex] = time*TICKS_PER_MSEC/SERVO_MIN_PERIOD +1;
