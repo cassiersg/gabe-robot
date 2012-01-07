@@ -18,6 +18,8 @@ static void interMovState(int level);
 #define DIS_INTER_POINTS 10
 #define MAX_NUM_INTER_P (200/DIS_INTER_POINTS+1)
 
+#define TOTAL_DUR_FACTOR 1000
+
 typedef struct Position Position;
 struct Position
 {
@@ -47,34 +49,34 @@ struct Amov
 };
 
 Amov firstSeq[] = {
-	{ 5000,   0, { 45,  45,  45}, E_angles, D_direct },
-	{ 10000, 20, {-45, -45, -45}, E_angles, D_direct },
-	{ 5000,   0, {  0,   0,   0}, E_angles, D_direct },
-	{-1, 0, { 0,  0,  0}, E_angles, D_direct },
+	{ 1,  0, { 45,  45,  45}, E_angles, D_direct },
+	{ 2,  0, {-45, -45, -45}, E_angles, D_direct },
+	{ 1,  0, {  0,   0,   0}, E_angles, D_direct },
+	{-1,    0, { 0,  0,  0}, E_angles, D_direct },
 };
 
 Amov secondSeq[] = {
-	{ 2000, 0, { 15,  15,  15}, E_angles, D_direct },
-	{ 2000, 0, { 30,  30,  30}, E_angles, D_direct },
-	{ 2000, 0, { 45,  45,  45}, E_angles, D_direct },
-	{ 2000, 0, { 30,  30,  30}, E_angles, D_direct },
-	{ 2000, 0, { 15,  15,  15}, E_angles, D_direct },
-	{ 2000, 0, {  0,   0,   0}, E_angles, D_direct },
+	{ 1, 0, { 15,  15,  15}, E_angles, D_direct },
+	{ 1, 0, { 30,  30,  30}, E_angles, D_direct },
+	{ 1, 0, { 45,  45,  45}, E_angles, D_direct },
+	{ 1, 0, { 30,  30,  30}, E_angles, D_direct },
+	{ 1, 0, { 15,  15,  15}, E_angles, D_direct },
+	{ 1, 0, {  0,   0,   0}, E_angles, D_direct },
 	{-1, 0, { 0,  0,  0}, E_angles, D_direct },
 };
 
 Amov thirdSeq[] = {
-	{ 0, 500, { -50, 80, 35}, E_coord_xyz, D_straight },
-	{ 0, 500, {  50, 80, 35}, E_coord_xyz, D_straight },
+	{ 0, 1, { -50, 80, 35}, E_coord_xyz, D_straight },
+	{ 0, 1, {  50, 80, 35}, E_coord_xyz, D_straight },
 	{-1, 0, { 0,  0,  0}, E_angles, D_direct },
 };
 
 
 Amov fourthSeq[] = {
-	{ 2000, 400, { -50, 80, 55}, E_coord_xyz, D_straight },
-	{    0, 400, { -50, 80, 35}, E_coord_xyz, D_straight },
-	{    0, 400, {  50, 80, 35}, E_coord_xyz, D_direct },
-	{    0, 400, {  50, 80, 55}, E_coord_xyz, D_straight },
+	{ 5, 1, { -50, 80, 55}, E_coord_xyz, D_straight },
+	{ 0, 1, { -50, 80, 35}, E_coord_xyz, D_straight },
+	{ 0, 1, {  50, 80, 35}, E_coord_xyz, D_direct },
+	{ 0, 1, {  50, 80, 55}, E_coord_xyz, D_straight },
 	{-1, 0, { 0,  0,  0}, E_angles, D_direct },
 };	
 
@@ -97,29 +99,29 @@ Amov interPoints[MAX_NUM_INTER_P];
 SubSeq interMove;
 
 struct SeqEntry
-
 {
 	SeqEntryType entryType;
-	SubSeq       subSeq;  	
+	SubSeq       subSeq;
+	int          durFactor;
 };
 
 //extern SeqEntry seqEntry2[];
 
 SeqEntry seqEntry[] = {
-{E_MovSeq,    firstSeq },
-{E_MovSeq,    secondSeq },
-{E_lastEntry, NULL },
+{E_MovSeq,    firstSeq,  1 },
+{E_MovSeq,    secondSeq, 1 },
+{E_lastEntry, NULL,      0 },
 };
 
 SeqEntry seqEntry3[] = {
-{E_MovSeq,    thirdSeq },
-{E_lastEntry, NULL },
+{E_MovSeq,    thirdSeq, 1 },
+{E_lastEntry, NULL,     0 },
 };
 
 
 SeqEntry seqEntry4[] = {
-{E_MovSeq,    fourthSeq },
-{E_lastEntry, NULL },
+{E_MovSeq,    fourthSeq, 1 },
+{E_lastEntry, NULL,      0 },
 };
 
 
@@ -131,7 +133,7 @@ struct SeqState
 	SeqEntryType seqType;
 	SubSeq  seq;
 	int seqIndex;
-
+	int duration;
 };
 
 typedef struct MoveState MoveState;
@@ -145,13 +147,51 @@ struct MoveState
 	PosEntryType currentE_type;
 };
 
-MoveState moveState = {{{E_SubSeq,(void *)seqEntry4,0},{0,NULL,0},{0,NULL,0},{0,NULL,0},{0,NULL,0}}, 
+MoveState moveState = {{{E_SubSeq,(void *)seqEntry3,0,4000},{0,NULL,0,0},{0,NULL,0,0},{0,NULL,0,0},{0,NULL,0,0}}, 
 						0, 0, {0, 0, 0}, E_angles };
 
+Amov *movSeqArray[] = {firstSeq, secondSeq, thirdSeq, fourthSeq, NULL};
+SeqEntry *seqEntryArray[] = {seqEntry, seqEntry3, seqEntry4, NULL};
 
 void move_init(void)
 {
 	interMove.moveSeq = interPoints;
+	int i, duration;
+	Amov *moveSeq = movSeqArray[0];
+	for (i=0; movSeqArray[i]!=NULL; i++)
+	{
+		moveSeq = movSeqArray[i];
+		duration = 0;
+		while (moveSeq->timeInThisState>=0)
+		{
+			duration += moveSeq->timeInThisState + moveSeq->timeToState;
+			moveSeq++;
+		}
+		moveSeq = movSeqArray[i];
+		while (moveSeq->timeInThisState>=0)
+		{
+			moveSeq->timeInThisState = TOTAL_DUR_FACTOR * moveSeq->timeInThisState / duration;
+			moveSeq->timeToState = TOTAL_DUR_FACTOR * moveSeq->timeToState / duration;
+			moveSeq++;
+		}
+	}
+	SeqEntry *entrySeq = seqEntryArray[0];
+	for (i=0; seqEntryArray[i]!=NULL; i++)
+	{
+		entrySeq = seqEntryArray[i];
+		duration = 0;
+		while (entrySeq->entryType != E_lastEntry)
+		{
+			duration += entrySeq->durFactor;
+			entrySeq++;
+		}
+		entrySeq = seqEntryArray[i];
+		while (entrySeq->entryType != E_lastEntry)
+		{
+			entrySeq->durFactor = TOTAL_DUR_FACTOR * entrySeq->durFactor / duration;
+			entrySeq++;
+		}
+	}
 }
 
 void process_move(void)
@@ -185,10 +225,12 @@ void process_move(void)
 					newSeqState->seqIndex = 0;
 					newSeqState->seqType = seqp->entryType;
 					newSeqState->seq =  seqp->subSeq;
+					newSeqState->duration = (seqState->duration)*(seqp->durFactor)/TOTAL_DUR_FACTOR;
 				}
 				else
 				{
 					// too many recursion level - so skip subsequence
+					printf("movement stack : too many recursion level\r\n");
 					seqState->seqIndex++;
 				}
 			}
@@ -208,13 +250,15 @@ void process_move(void)
 				if (movp->posType == E_angles)
 				{
 					int i;
+					int timeToState = (seqState->duration)*(movp->timeToState)/TOTAL_DUR_FACTOR;
+					int timeInThisState = (seqState->duration)*(movp->timeInThisState)/TOTAL_DUR_FACTOR;
 					for (i=0; i<MAX_MOTOR_CONTROLLED; i++)
 					{
-						motor_setAngle((movp->podPosition.motorAngles)[i],i,movp->timeToState);
+						motor_setAngle((movp->podPosition.motorAngles)[i],i,timeToState);
 					}
 					moveState.currentE_type= E_angles;
 					/* decide nextTime */
-					 moveState.nextExitTime = currentTime + ( movp->timeInThisState + movp->timeToState) *TICKS_PER_MSEC;
+					 moveState.nextExitTime = currentTime + (timeInThisState + timeToState) * TICKS_PER_MSEC;
                     /* jump to the next entry */
                     seqState->seqIndex++;
 				}
@@ -226,7 +270,7 @@ void process_move(void)
 					{
 						int num_points = abs((coord->x-moveState.currentPos.x)/DIS_INTER_POINTS)+1;
 						int i;
-						int timeToState = (movp->timeToState)/num_points;
+						int timeFactor = TOTAL_DUR_FACTOR*(movp->timeToState)/((movp->timeToState + movp->timeInThisState)*num_points);
 						int x= (coord->x - moveState.currentPos.x)/num_points;
 						int y= (coord->y - moveState.currentPos.y)/num_points;
 						int z= (coord->z - moveState.currentPos.z)/num_points;
@@ -235,14 +279,14 @@ void process_move(void)
 						{
 							interPointPtr = &interPoints[i];
 							interPointPtr->timeInThisState = 0;
-							interPointPtr->timeToState = timeToState;
+							interPointPtr->timeToState = timeFactor;
 							interPointPtr->podPosition.position.x = moveState.currentPos.x + x*(i+1);
 							interPointPtr->podPosition.position.y = moveState.currentPos.y + y*(i+1);
 							interPointPtr->podPosition.position.z = moveState.currentPos.z + z*(i+1);
 							interPointPtr->posType = E_coord_xyz;
 							interPointPtr->displaceType = D_direct;
 						}
-						interPoints[num_points-1].timeInThisState = movp->timeInThisState;
+						interPoints[num_points-1].timeInThisState = TOTAL_DUR_FACTOR*(movp->timeInThisState)/(movp->timeToState + movp->timeInThisState);
 						interPoints[num_points].timeInThisState = -1;
 
 						moveState.currentStackLevel++;
@@ -250,17 +294,20 @@ void process_move(void)
 						newSubSeqState->seqIndex = 0;
 						newSubSeqState->seqType = E_MovSeq;
 						newSubSeqState->seq = interMove;
+						newSubSeqState->duration = (seqState->duration)*(movp->timeInThisState + movp->timeToState)/TOTAL_DUR_FACTOR;
 					}
 					else
 					{	
-						pod_setPosition(coord->x, coord->y, coord->z, movp->timeToState, 0, 1, 2);
+						int timeToState = (seqState->duration)*(movp->timeToState)/TOTAL_DUR_FACTOR;
+						int timeInThisState = (seqState->duration)*(movp->timeInThisState)/TOTAL_DUR_FACTOR;
+						pod_setPosition(coord->x, coord->y, coord->z, timeToState, 0, 1, 2);
 						event_save("movement.c, setPosition: x:%i, y:%i, z:%i", coord->x, coord->y, coord->z);
 						moveState.currentPos.x = coord->x;
 						moveState.currentPos.y = coord->y;
 						moveState.currentPos.z = coord->z;
 						moveState.currentE_type = E_coord_xyz;
 						/* decide nextTime */
-						moveState.nextExitTime = currentTime + ( movp->timeInThisState + movp->timeToState) *TICKS_PER_MSEC;
+						moveState.nextExitTime = currentTime + (timeInThisState + timeToState) * TICKS_PER_MSEC;
                         /* jump to the next entry */
                         seqState->seqIndex++;
 					}
@@ -306,6 +353,7 @@ static void stackState(void)
 		printf("   STACK LEVEL %i\r\n", i);
 		printf("      sequence:%p\r\n", curSeq->seq);
 		printf("      cur index:%i\r\n", curSeq->seqIndex);
+		printf("      duration:%i\r\n", curSeq->duration);
 		if ((int)curSeq->seq.moveSeq == (int)interMove.moveSeq)
 		{
 			interPlvl = curSeq->seqIndex ;
