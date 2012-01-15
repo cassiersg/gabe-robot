@@ -5,6 +5,22 @@
 
 #define MAX_COMMAND_LIST 10
 
+//#define USE_UART1
+#ifndef USE_UART1
+#define OpenUART  OpenUART2
+#define DataRdyUART DataRdyUART2
+#define ReadUART ReadUART2
+#define putcUART putcUART2
+#define putsUART putsUART2
+#else
+#define OpenUART  OpenUART1
+#define DataRdyUART DataRdyUART1
+#define ReadUART ReadUART1
+#define putcUART putcUART1
+#define putsUART putsUART1
+#endif
+
+
 typedef struct CmdEntry CmdEntry;
 struct CmdEntry
 {
