@@ -3,15 +3,11 @@
 #include <stdio.h>
 #include "robot_console.h"
 
-/* maximum number of char in one command */
-#define MAX_CMD_LEN 512
 
 /* local functions */
 static int  splitCmd(uint8 *theCmd, uint8 *args[], int maxArg);
 static int  printHelp(uint8 *args[], int argc);
 static void processCmd(uint8 *theCmd, int cmdLen);
-
-
 
 /* cmd entry is the basic element used to
    construct the menu list
@@ -27,6 +23,8 @@ int numberOfMenu = 0;
 /* maximum number of arguments of a function (+1 : name of the function) */
 #define MAX_ARG 8
 
+/* maximum number of char in one command */
+#define MAX_CMD_LEN 512
 uint8 theCmd[MAX_CMD_LEN];
 int cmdLen = 0;
 int totalStr = 0;
@@ -34,7 +32,7 @@ int totalStr = 0;
 void console_init(int pbClk, int desiredBaudRate)
 {
 	// Module is ON, Enable TX & RX, baudrate is determined by the caller, 8-N-1
-	OpenUART2(UART_EN, UART_RX_ENABLE | UART_TX_ENABLE, pbClk/16/desiredBaudRate-1);		
+	OpenUART(UART_EN, UART_RX_ENABLE | UART_TX_ENABLE, pbClk/16/desiredBaudRate-1);		
 	console_addCommandsList(localMenu);
 }
 
@@ -50,29 +48,233 @@ void console_addCommandsList(CmdEntry *cmdList)
 }
 
 
-/* function which verify whether
-   there is something to do for the console
-   If a command is detected, it will immediately
-   handle the command
+/* To be done :
+   interprete arrows key in order to retrieve previous commands
+
+   when moving the arrow, the current command is replaced by an existing one.
+   Arrows key's are display as 3 consecutive chars : 
+    0x1b 0x5b 0x41 = up
+    0x1b 0x5b 0x42 = down
+    0x1b 0x5b 0x43 = left
+    0x1b 0x5b 0x44 = rigth
+
+
+Replay buffer:
+ each time we execute a command, we copy it in the replay buffer.
+ The up and down arrows allow to reload previous commands. 
+ Each time the up or down arrow is touched, the pointer in 
+ the replay buffer is moved and the pointer command is reloaded into the current string command.
+ When "enter" is touched, the current string command is moved into the 
+ replay buffer and the pointer is moved to the next free place.
+
+ Each cmd string in the buffer is preceeded by the 2 bytes representing the length, 
+ then the string itself (padded with 1 byte if the length is odd, and then the length again.
+ The second length allows to go back.
+
 */
+
+#define REPLAY_LENGTH 1500
+uint16 replayBuffer[REPLAY_LENGTH];
+int bufferNext = 0;
+int bufferFirst= 0;
+int bufferPointer = 0;
+
+void storeCmdInReplayBuf(uint8 *strCmd, int len)
+{
+	// to be completed. We should check whether the new command is the same as the last one
+	{
+		// check if lastLen is the same as the previous one
+		int lastCmd = bufferNext-1;
+		if (lastCmd<0)
+			lastCmd += REPLAY_LENGTH;
+		int lastLen = replayBuffer[lastCmd];
+		// if so do a memcmp optionally in 2 steps
+		if (lastLen == len)
+		{
+			int cmdIsDifferent = 0;
+			uint8 *tempNewCmd = strCmd;
+			lastCmd -= (lastLen+1)>>1;
+			if (lastCmd < 0)
+				lastCmd += REPLAY_LENGTH;
+
+			int spaceTillEnd = (REPLAY_LENGTH - lastCmd)<<1;
+			if (spaceTillEnd < lastLen)
+			{
+				cmdIsDifferent = memcmp(tempNewCmd, &replayBuffer[lastCmd],spaceTillEnd);
+				lastLen -= (spaceTillEnd>>1);
+				lastCmd = 0;
+				tempNewCmd += spaceTillEnd; 
+			}
+			cmdIsDifferent |= memcmp(tempNewCmd, &replayBuffer[lastCmd], lastLen);
+			if (cmdIsDifferent == 0)
+			{
+				bufferPointer = bufferNext;
+				return; // same command no need to store it
+			}
+		}		
+	}
+	// check whether there is enough place in the replay buffer
+	int occupied = bufferNext - bufferFirst;
+	if (occupied < 0)
+		occupied += REPLAY_LENGTH;
+
+	int freeSpace = REPLAY_LENGTH - occupied;
+	int missingSpace = ((len+5)>>1)-(freeSpace-1);
+
+	#if 0
+	printf("copying new command size=%i, freeSpace=%i,missingSpace=%i [%i,%i]\n",
+		len, freeSpace, missingSpace, bufferFirst, bufferNext);
+	#endif
+	while (missingSpace > 0)
+	{
+		// if not enough place in the replay buffer => drop n first cmd
+		int firstLen = (replayBuffer[bufferFirst]+5)>>1;
+		bufferFirst += firstLen;
+		missingSpace -= firstLen;
+		printf("drop %i\n",firstLen);
+		if (bufferFirst >= REPLAY_LENGTH)
+			bufferFirst -= REPLAY_LENGTH;
+	}
+	// we now have enough place
+	// copy the cmd - could be in two step in case of wrap around, update bufferNext 
+	replayBuffer[bufferNext++] = len;
+	if (bufferNext >= REPLAY_LENGTH)
+		bufferNext -= REPLAY_LENGTH;
+
+	int toCopy = bufferNext;
+	int freeSpaceTillEnd = REPLAY_LENGTH-bufferNext;
+	int tempLen = len;
+	if (freeSpaceTillEnd < ((len+1)>>1))
+	{
+		memcpy(&replayBuffer[bufferNext], strCmd, freeSpaceTillEnd<<1);
+		bufferNext = 0; 
+		tempLen -= freeSpaceTillEnd <<1;
+		strCmd += freeSpaceTillEnd<<1;
+	}
+	memcpy(&replayBuffer[bufferNext], strCmd, tempLen);
+	bufferNext += (tempLen+1)>>1;
+	if (bufferNext >= REPLAY_LENGTH)
+		bufferNext -= REPLAY_LENGTH;
+	replayBuffer[bufferNext++] = len;
+	if (bufferNext >= REPLAY_LENGTH)
+		bufferNext -= REPLAY_LENGTH;
+	 
+	// and bufferPointer (which is reset each time we store a new command)
+	bufferPointer = bufferNext;
+}
+
+// return true if a new command has been copied
+int movePointer(uint8 *strCmd, int *len, int isUp /* go to a previous command */)
+{
+	/* if move is possble copy newly pointed command in the strCmd, len */
+	int copyFrom = -1; /* offset of the comman to copy -1 indicates no copy possible */
+	if (isUp && (bufferPointer != bufferFirst))
+	{
+		/* we can go up */
+		bufferPointer --;
+		if (bufferPointer < 0)
+			bufferPointer +=  REPLAY_LENGTH;
+		int length = replayBuffer[bufferPointer];
+		bufferPointer -= (length+3)>>1;
+		if (bufferPointer <0)
+			bufferPointer += REPLAY_LENGTH;
+		copyFrom = bufferPointer;
+    }
+	if ((isUp==0) && (bufferPointer != bufferNext))
+	{
+		int lengthOfCurr = replayBuffer[bufferPointer];
+		bufferPointer += (lengthOfCurr + 5)>>1;
+		if (bufferPointer >= REPLAY_LENGTH)
+			bufferPointer -= REPLAY_LENGTH;
+		if (bufferPointer != bufferNext)
+		{
+			copyFrom = bufferPointer;
+		}
+		else
+		{
+			*len = 0;
+			return 1;
+		}
+	}
+	if (copyFrom != -1)
+	{
+		/* we want to copy */
+		int length = replayBuffer[copyFrom];
+		copyFrom ++;
+		if (copyFrom >= REPLAY_LENGTH)
+			 copyFrom -= REPLAY_LENGTH;
+		*len = length;
+		if ((copyFrom+((length+1)>>1)) > REPLAY_LENGTH)
+		{
+			/* wrap around => copy in two steps */
+			memcpy(strCmd, &replayBuffer[copyFrom], (REPLAY_LENGTH-copyFrom)<<1);
+			length -= (REPLAY_LENGTH-copyFrom)<<1;
+			strCmd += (REPLAY_LENGTH-copyFrom)<<1;
+			copyFrom = 0;
+		}
+		memcpy(strCmd, &replayBuffer[copyFrom], length);
+		return 1;
+	}
+	return 0;
+}
+
+
+
 void console_process(void)
 {
-	if (DataRdyUART2())
+	if (DataRdyUART())
 	{
-       	uint8 newChar = (char)ReadUART2(); // Read data from Rx.
+       	uint8 newChar = (char)ReadUART(); // Read data from Rx.
  		theCmd[cmdLen] = newChar;
+		//printf("char=0x%x\n", newChar);
+		// we should process here the up and down arrow in order to easily replay previous command
+		// we will maintain a stack with the last 10 commands. pushing on arrow
+		// will load in the buffer the content of a previous command
 		cmdLen++;
 		if ((newChar == '\n') || (newChar == '\r'))
 		{
-			putcUART2('\r');
-			putcUART2('\n');
+			putcUART('\r');
+			putcUART('\n');
+			// copy the command in the command buffer
+			theCmd[cmdLen-1] = 0; // transform the string in null terminated string 
+			storeCmdInReplayBuf(theCmd, cmdLen-1); // do not copy the null string
 			processCmd(theCmd, cmdLen);
 			cmdLen = 0;
+		}
+		else if (newChar == 0x1b)
+		{
+			cmdLen--; // do not keep control char in the buffer
+			// read the 2 next char in order to be sure
+			// note this could block the program is we do not get the addiotnal chars on the UART
+			// we could avoid this by never xaiting more than x msecs.
+			while (! DataRdyUART())
+				;
+			uint8 secondChar = (char)ReadUART();
+			while (! DataRdyUART())
+				;
+			uint8 thirdChar = (char)ReadUART();
+			if (((thirdChar == 0x41)||(thirdChar == 0x42)) && (secondChar == 0x5b))
+			{
+				int prevLen = cmdLen;
+				if (movePointer(theCmd, &cmdLen, (thirdChar == 0x41)))
+				{
+					// back space the complete len
+					while (prevLen --)
+						putcUART(127);
+					// display the new cmd
+					//printf("recover previous command len=%i\n",cmdLen);
+					theCmd[cmdLen] = 0; // be sure the string is null terminated
+					int i;
+					for (i=0; i< cmdLen; i++)
+						putcUART(theCmd[i]);
+				}
+			} 
+
 		}
 		else
 		{
 			// handle special characters here
-			putcUART2(newChar);
+			putcUART(newChar);
 			if (newChar == 127)  // this is backspace
 			{
 				cmdLen -=2; // remove the backspace it self and the previous char
@@ -150,7 +352,6 @@ static void processCmd(uint8 *theCmd, int cmdLen)
 	uint8 *args[MAX_ARG];
 	if (cmdLen > 1)
 	{
-		theCmd[cmdLen-1] = 0;
 		int res = splitCmd(theCmd, args, MAX_ARG);
 
 		// go through the menu list and select the right entry
@@ -167,8 +368,8 @@ static void processCmd(uint8 *theCmd, int cmdLen)
 				if (0==entryDoesNotMatch)
 				{
 					notFound = 0; // we found en entry
-					printf("res=%i; arg[0]=%s,arg[1]=%s,arg[2]=%s,arg[3]=%s\r\n",
-				   		res,args[0],args[1],args[2],args[3]);
+					//printf("res=%i; arg[0]=%s,arg[1]=%s,arg[2]=%s,arg[3]=%s\r\n",
+				    //	res,args[0],args[1],args[2],args[3]);
 					if (res >= entry->minArgs)
 						(entry->processingFunction)(args, res);
 					else
@@ -187,7 +388,7 @@ static void processCmd(uint8 *theCmd, int cmdLen)
 		}
 	}
 	// print the shell
-	putsUART2(">>> ");
+	putsUART(">>> ");
 }
 
 
@@ -213,4 +414,12 @@ static int printHelp(uint8 *args[], int argc)
 	}
 	return 0;
 }
+
+
+#ifdef USE_UART1
+void _mon_putc(char c)
+{
+	putcUART(c);
+}
+#endif
 

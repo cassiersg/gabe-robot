@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include "basic_types.h"
 #include "robot_time.h"
+#include "robot_console.h"
 #include "motor_control.h"
 #include "status_led.h"
 #include "historical.h"
@@ -88,9 +89,9 @@ int main(void)
 	uint32 t0;
 
 	// Send 'Hello' message through RS232
-    putsUART2("\n*** WELCOME TO THE ROBOT'S WORLD ***\r\n");
-    putsUART2("*** Type help is needed ***\r\n");
-	putsUART2(">>> ");
+    putsUART("\n*** WELCOME TO THE ROBOT'S WORLD ***\r\n");
+    putsUART("*** Type help is needed ***\r\n");
+	putsUART(">>> ");
 
     while(1)
 	{
