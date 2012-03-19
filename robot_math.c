@@ -3,8 +3,6 @@
 
 #define RAD_RANGLE(rad) (rad/2/M_PI*ANGLE_UNIT)
 
-static int sinCos(int x);
-
 int16 r_asinD(int x, int y)
 {
 	return (int)RAD_RANGLE(asin(((float)x)/y));

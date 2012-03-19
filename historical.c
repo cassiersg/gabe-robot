@@ -5,7 +5,7 @@
 #include "historical.h"
 #include "basic_types.h"
 #include "robot_console.h"
-
+#include "robot_time.h"
 
 static int  his_setSate(uint8 *args[], int argc);
 static int  historic_show(uint8 *args[], int argc);
@@ -194,4 +194,5 @@ static int  his_setSate(uint8 *args[], int argc)
 static int  historic_show(uint8 *args[], int argc)
 {
 	showHistorical();
+	return 0;
 }

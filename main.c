@@ -37,7 +37,7 @@
 #include "motor_control.h"
 #include "status_led.h"
 #include "historical.h"
-
+#include "movement.h"
 
 // Configuration Bit settings
 // SYSCLK = 72 MHz (8MHz Crystal/ FPLLIDIV * FPLLMUL / FPLLODIV)
