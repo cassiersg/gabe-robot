@@ -12,12 +12,20 @@
 #define ReadUART ReadUART2
 #define putcUART putcUART2
 #define putsUART putsUART2
+#define ConfigIntUART ConfigIntUART2
+#define _UART_VECTOR _UART2_VECTOR
+#define mURXGetIntFlag   mU2RXGetIntFlag
+#define mURXClearIntFlag mU2RXClearIntFlag
 #else
 #define OpenUART  OpenUART1
 #define DataRdyUART DataRdyUART1
 #define ReadUART ReadUART1
 #define putcUART putcUART1
 #define putsUART putsUART1
+#define ConfigIntUART ConfigIntUART1
+#define _UART_VECTOR _UART1_VECTOR
+#define mURXGetIntFlag   mU1RXGetIntFlag
+#define mURXClearIntFlag mU1RXClearIntFlag
 #endif
 
 
@@ -46,4 +54,5 @@ void console_addCommandsList(CmdEntry *cmdList);
 */
 void console_process(void);
 
+void console_processCmd(char *);
 #endif
