@@ -33,6 +33,11 @@ void console_init(int pbClk, int desiredBaudRate)
 {
 	// Module is ON, Enable TX & RX, baudrate is determined by the caller, 8-N-1
 	OpenUART(UART_EN, UART_RX_ENABLE | UART_TX_ENABLE, pbClk/16/desiredBaudRate-1);		
+
+	// STEP 3. Configure UART2 RX Interrupt
+
+	ConfigIntUART(UART_INT_PR3 | UART_RX_INT_EN | UART_TX_INT_DIS);
+
 	console_addCommandsList(localMenu);
 }
 
@@ -43,7 +48,7 @@ void console_addCommandsList(CmdEntry *cmdList)
 		headMenu[numberOfMenu++] = cmdList;
 	else
 	{
-		printf("Error: too many command list\n");
+		putsUART("Error: too many command list\n\r");
 	}
 }
 
@@ -219,12 +224,26 @@ int movePointer(uint8 *strCmd, int *len, int isUp /* go to a previous command */
 }
 
 
+void console_processCmd(char *cmd)
+{
+	int len = strlen(cmd);
+	putsUART("\n\r");
+	processCmd(cmd, len);
+}
+
+#define CONSOLE_BUF_LEN 256
+uint8 consoleBuffer[CONSOLE_BUF_LEN];
+volatile int buffWrite = 0;
+volatile int buffRead = 0;
+
 
 void console_process(void)
 {
-	if (DataRdyUART())
+	if (buffWrite != buffRead)
 	{
-       	uint8 newChar = (char)ReadUART(); // Read data from Rx.
+       	uint8 newChar = (char)consoleBuffer[buffRead++]; // Read data from Rx.
+		if (buffRead >= CONSOLE_BUF_LEN)
+			buffRead = 0;
  		theCmd[cmdLen] = newChar;
 		//printf("char=0x%x\n", newChar);
 		// we should process here the up and down arrow in order to easily replay previous command
@@ -233,8 +252,9 @@ void console_process(void)
 		cmdLen++;
 		if ((newChar == '\n') || (newChar == '\r'))
 		{
-			putcUART('\r');
-			putcUART('\n');
+			putsUART("\r\n");
+			putsUART("newLineDetected\r\n");
+			
 			// copy the command in the command buffer
 			theCmd[cmdLen-1] = 0; // transform the string in null terminated string 
 			storeCmdInReplayBuf(theCmd, cmdLen-1); // do not copy the null string
@@ -247,12 +267,18 @@ void console_process(void)
 			// read the 2 next char in order to be sure
 			// note this could block the program is we do not get the addiotnal chars on the UART
 			// we could avoid this by never xaiting more than x msecs.
-			while (! DataRdyUART())
+			while (buffRead == buffWrite)
 				;
-			uint8 secondChar = (char)ReadUART();
-			while (! DataRdyUART())
+			uint8 secondChar = (char)consoleBuffer[buffRead++]; // Read data from Rx.
+			if (buffRead >= CONSOLE_BUF_LEN)
+				buffRead = 0;
+
+			while (buffRead == buffWrite)
 				;
-			uint8 thirdChar = (char)ReadUART();
+			uint8 thirdChar = (char)consoleBuffer[buffRead++]; // Read data from Rx.
+			if (buffRead >= CONSOLE_BUF_LEN)
+				buffRead = 0;
+
 			if (((thirdChar == 0x41)||(thirdChar == 0x42)) && (secondChar == 0x5b))
 			{
 				int prevLen = cmdLen;
@@ -286,7 +312,8 @@ void console_process(void)
 			{
             	totalStr++;
                 theCmd[cmdLen-1] = 0;
-				printf("unknown command %i %s\n\r", totalStr,theCmd);
+				printf("unknown command %i %s", totalStr,theCmd);
+				putsUART("\r\n");
 				cmdLen = 0;
 			}
 		}
@@ -352,6 +379,8 @@ static void processCmd(uint8 *theCmd, int cmdLen)
 	uint8 *args[MAX_ARG];
 	if (cmdLen > 1)
 	{
+		//printf("(%s)\n\r",theCmd);
+
 		int res = splitCmd(theCmd, args, MAX_ARG);
 
 		// go through the menu list and select the right entry
@@ -394,8 +423,8 @@ static void processCmd(uint8 *theCmd, int cmdLen)
 
 static int printHelp(uint8 *args[], int argc)
 {
-	printf("this is the main help function \r\n");
-	printf("commands:\r\n\r\n");
+	putsUART("this is the main help function \r\n");
+	putsUART("commands:\r\n\r\n");
 	int i,j;
 	for (i=0; i<numberOfMenu;i++)
 	{
@@ -407,19 +436,36 @@ static int printHelp(uint8 *args[], int argc)
 			while (12-k >0)
 			{
 				k++;
-				printf(" ");
+				putsUART(" ");
 			}
-			printf("%s\r\n", menu[j].theHelp);
+			printf("%s", menu[j].theHelp);
+			putsUART("\r\n");
 		}
 	}
 	return 0;
 }
 
 
+	
+void __ISR(_UART_VECTOR, ipl3) IntUartConsoleHandler(void)
+{
+	// Is this an RX interrupt?
+	if(mURXGetIntFlag())
+	{
+		// Clear the RX interrupt Flag
+	    mURXClearIntFlag();
+		uint8 theChar = ReadUART();
+		consoleBuffer[buffWrite++] = theChar;
+		if (buffWrite >= CONSOLE_BUF_LEN)
+			buffWrite = 0;
+	}
+}
+
 #ifdef USE_UART1
 void _mon_putc(char c)
 {
 	putcUART(c);
 }
+
 #endif
 

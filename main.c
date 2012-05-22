@@ -52,7 +52,7 @@
 
 #define FOSC           		72E6
 
-#define DESIRED_BAUDRATE    	(9600)      //The desired BaudRate
+#define DESIRED_BAUDRATE    	(115200)      //The desired BaudRate
 
 
 
