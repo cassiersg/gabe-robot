@@ -6,41 +6,189 @@
 #include "motor_control.h"
 #include "robot_math.h"
 #include "robot_console.h"
+#include "historical.h"
+
+#define MAX_MOTOR 4
 
 #define SERVO_MIN_PERIOD (TICKS_PER_MSEC *18)  // 18 msecs
 #define MIN_DURATION     100 // min wait time
-#define ANGLE_0          3720 // 3.307 msec
-#define ANGLE_RPI2       1818 // 1.616 msec
-#define D_ANGLE_RPI2     (ANGLE_RPI2-ANGLE_0) // 2PI/4
+
+uint32 nullVar;
+
+static void m_setAngle_imp(int impulseLength, int motorIndex, uint32 time);
+static int  m_testRAngle(int angle, int motorIndex);
+static void m_setAngle_ra_noTest(int angle, int motorIndex, uint32 time);
+
+static int c_setAngle_ra(uint8 *args[], int argc);
+static int c_setAngle_deg(uint8 *args[], int argc);
+static int c_setAngle_imp(uint8 *args[], int argc);
+static int c_setPosition(uint8 *args[], int argc);
+static int c_motors_state(uint8 *args[], int argc);
 
 
+//~~~~~~~~~~ MOTORS STATE ~~~~~~~~~~
 
-static int  setAngle(uint8 *args[], int argc);
-static int  setPosition(uint8 *args[], int argc);
-static int  msetAngle(uint8 *args[], int argc);
-static int  motors_state(uint8 *args[], int argc);
+// description of the features of a motor type
+typedef struct MotorType MotorType;
+struct MotorType
+{
+    int impPi2;
+    int midImpLen;
+    int deltaRangle;
+};
+#define BM_MIN_IMP 1550
+#define BM_MAX_IMP 3850
+#define BM_IMP_PI2 1840
+#define DM_MIN_IMP 1400
+#define DM_MAX_IMP 5000
+#define DM_IMP_PI2 2300
+MotorType blueMotor = {BM_IMP_PI2, (BM_MAX_IMP+BM_MIN_IMP)/2, (BM_MAX_IMP-BM_MIN_IMP)*RANGLE_PI2/2/BM_IMP_PI2};
+MotorType darkMotor = {DM_IMP_PI2, (DM_MAX_IMP+DM_MIN_IMP)/2, (DM_MAX_IMP-DM_MIN_IMP)*RANGLE_PI2/2/DM_IMP_PI2};
+#undef BM_MIN_IMP
+#undef BM_MAX_IMP
+#undef BM_IMP_PI2
+#undef DM_MIN_IMP
+#undef DM_MAX_IMP
+#undef DM_IMP_PI2
+
+// for unused "motors"
+MotorType noneMotor = {0, 0, 0};
+
+#define PORT_D_INV ((uint32 *)0xBF8860EC)
+#define PORT_E_INV ((uint32 *)0xBF88612C)
+
+// physical interface of a motor
+typedef struct Amotor Amotor;
+struct Amotor
+{
+    MotorType *type;
+    uint32 *toggleRegister;
+    uint32 toggleValue;
+};
+
+Amotor motors[MAX_MOTOR+2] = {
+    {&darkMotor, PORT_D_INV, 1<<2},
+    {&darkMotor, PORT_D_INV, 1<<3},
+    {&blueMotor, PORT_D_INV, 1<<4},
+    {&blueMotor, PORT_D_INV, 1<<5},
+    {&noneMotor, &nullVar,   0},
+    {&noneMotor, &nullVar,   0},
+};
+
+int motorImpLenFinal[MAX_MOTOR+3] = {0};
+int motorImpulseLengths[MAX_MOTOR+3] = {0};
+int numberPeriod_toFinal[MAX_MOTOR+3] = {0};
+
+
+//~~~~~~~~~~ CONSOLE APPLICATION ~~~~~~~~~~
+
 CmdEntry motorConsoleMenu[] = {
-	{ "setangle",    setAngle,       4, "setangle <motIdx> <val degre> <time ms>"},
-	{ "sa",          setAngle,       2, "setangle <motIdx> <val degre> <time ms>"},
-	{ "setposition", setPosition,    8, "setposition <x> <y> <z> <time ms> <motor1> <motor2> <motot3>"},
-	{ "sp",          setPosition,    4, "setposition <x> <y> <z> <time ms> <motor1> <motor2> <motot3>"},
-	{ "mstate",      motors_state,   1, "angles of the motors"},
-	{ "sad",         msetAngle,      4, "setangle <motIdx> <val rangle> <time ms>"},
+	{ "setangle",    c_setAngle_deg, 2, "setangle <val degrees> <motIdx> <time ms>"},
+	{ "sa",          c_setAngle_deg, 2, "setangle <val degrees> <motIdx> <time ms>"},
+	{ "setposition", c_setPosition,  8, "setposition <x> <y> <z> <time ms> <motor1> <motor2> <motot3>"},
+	{ "sp",          c_setPosition,  4, "setposition <x> <y> <z> <time ms> <motor1> <motor2> <motot3>"},
+	{ "mstate",      c_motors_state, 1, "angles of the motors"},
+	{ "sra",         c_setAngle_ra,  2, "setangle <val rangle> <motIdx> <time ms>"},
+	{ "simp",        c_setAngle_imp, 2, "setangle <val imp len> <mot Idx> <time ms>"},
 	{ NULL,       NULL,      0, NULL},
 };
 
-
-
-
-// motor control command
-#define MAX_MOTOR 4
-int motorImpLenFinal[MAX_MOTOR]={ANGLE_0 + D_ANGLE_RPI2/2,ANGLE_0 + D_ANGLE_RPI2/2,ANGLE_0 + D_ANGLE_RPI2/2,ANGLE_0 + D_ANGLE_RPI2/2};
-int motorImpulseLengths[MAX_MOTOR] = {ANGLE_0 + D_ANGLE_RPI2/2,ANGLE_0 + D_ANGLE_RPI2/2,ANGLE_0 + D_ANGLE_RPI2/2,ANGLE_0 + D_ANGLE_RPI2/2};
-int numberPeriod_toFinal[MAX_MOTOR] = { 0, 0, 0, 0};
-
-
-int motor_init(void)
+static int c_setAngle_imp(uint8 *args[], int argc)
 {
+    int motorIdx = atoi(args[1]);
+    int angle=0, time=100;
+    if (argc>2)
+    {
+        angle = atoi(args[2]);
+        if (argc>3)
+            time = atoi(args[3]);
+    }
+    printf("setAngle function %i impluses\r\n", angle);
+    m_setAngle_imp(angle, motorIdx, time);
+    return 0;
+}
+
+static int c_setAngle_ra(uint8 *args[], int argc)
+{
+	int motorIdx = atoi(args[1]);
+	int angle=0, time=100;
+	if (argc>2)
+		angle = atoi(args[2]);
+	if (argc>3)
+		time = atoi(args[3]);
+
+	printf("setAngle function %i RA\r\n", angle);
+	int res = m_setAngle_ra(angle,motorIdx, time);
+	if (res != SUCCESS)
+	{
+		printf("could not apply requested angle\r\n");
+	}
+	return 0;
+}
+
+static int c_setAngle_deg(uint8 *args[], int argc)
+{
+    int motorIdx = atoi(args[1]);
+    int angle=0, time=100;
+    if (argc>2)
+    {
+        angle = atoi(args[2]);
+        if (argc>3)
+            time = atoi(args[3]);
+    }
+    printf("setAngle function %i degrees\r\n", angle);
+	int res = m_setAngle_deg(angle,motorIdx, time);
+	if (res != SUCCESS)
+	{
+		printf("could not apply requested angle\r\n");
+	}
+	return 0;
+}
+
+
+static int c_setPosition(uint8 *args[], int argc)
+{
+	int x=atoi(args[1]);
+	int y=atoi(args[2]);
+	int z=atoi(args[3]);
+	int motor1=0, motor2=1, motor3=2, time=500;
+	if (argc>4)
+	{
+		time = atoi(args[4]);
+    }
+	if (argc>7)
+	{
+		motor1=atoi(args[5]);
+		motor2=atoi(args[6]);
+		motor3=atoi(args[7]);
+	}
+	printf("setPosition fuction %i %i %i, time: %i  \r\n", x, y, z, time);
+	if (pod_setPosition(x, y, z, time, motor1, motor2, motor3)!=SUCCESS)
+		printf("could not apply requested position\r\n");
+	return 0;
+}
+
+static int c_motors_state(uint8 *args[], int argc)
+{
+    printf("motors state:\r\n");
+    show_motors();
+    return 0;
+}
+
+        
+//~~~~~~~~~~ MOTORS COMMAND ~~~~~~~~~~
+
+void motor_init(void)
+{
+    // init state variables
+    int i;
+    for (i=0; i<MAX_MOTOR+2; i++)
+    {
+        motorImpLenFinal[i] = motors[i].type->midImpLen;
+        motorImpulseLengths[i] = motors[i].type->midImpLen;
+        numberPeriod_toFinal[i] = 0;
+    }
+    
 	// motor is mapped on RD2. set it to low
     PORTSetPinsDigitalOut(IOPORT_D, BIT_2);
     mPORTDClearBits(BIT_2);
@@ -61,35 +209,68 @@ int motor_init(void)
 	console_addCommandsList(motorConsoleMenu);
 }
 
-int motor_setAngle(int angle, int motorIndex, uint32 time)
+static void m_setAngle_imp(int impulseLength, int motorIndex, uint32 time)
 {
-	angle = DEG_RANGLE(angle);
-	return m_setAngle(angle, motorIndex, time);
+    numberPeriod_toFinal[motorIndex] = time*TICKS_PER_MSEC/SERVO_MIN_PERIOD +1;
+    motorImpLenFinal[motorIndex] = impulseLength;
 }
 
-int m_setAngle(int angle, int motorIndex, uint32 time)
+static int m_testRAngle(int angle, int motorIndex)
 {
-	int res = SUCCESS;
-	if ((angle >= -ANGLE_UNIT*50/360) && (angle <= ANGLE_UNIT*50/360) && (motorIndex>=0) && (motorIndex < MAX_MOTOR))
-	{
-	    int wantedImpulse = ANGLE_0 + (RANGLE_PI4+angle)*D_ANGLE_RPI2/RANGLE_PI2;
-		numberPeriod_toFinal[motorIndex] = time*TICKS_PER_MSEC/SERVO_MIN_PERIOD +1;
-		motorImpLenFinal[motorIndex] = wantedImpulse;
-	}
-	else
-	{
-	    printf("angle  %d out of range or motorIndex %d unknown\r\n", angle, motorIndex);
-	    res = FAILURE;
-	}
-	return res;
+    return  0 <= motorIndex && 
+            motorIndex < MAX_MOTOR && 
+            R_ABS(angle) <= motors[motorIndex].type->deltaRangle;
 }
+
+
+static void m_setAngle_ra_noTest(int angle, int motorIndex, uint32 time)
+{
+    MotorType *type = motors[motorIndex].type;
+    int impLen = type->midImpLen + angle * type->impPi2 / RANGLE_PI2;
+    return m_setAngle_imp(impLen, motorIndex, time);
+}        
+
+int m_setAngle_ra(int angle, int motorIndex, uint32 time)
+{
+    if (m_testRAngle(angle, motorIndex))
+    {
+        m_setAngle_ra_noTest(angle, motorIndex, time);
+        return SUCCESS;
+    }
+    else
+    {
+        printf("ERROR setAngle: motorIdx %i, angle %i\r\n", motorIndex, angle);
+        return FAILURE;
+    }
+}        
+
+int m_setAngle_deg(int angle, int motorIndex, uint32 time)
+{
+	angle = DEG_RANGLE(angle);
+	return m_setAngle_ra(angle, motorIndex, time);
+}
+    
+void show_motors(void)
+{
+	int angle, i;
+	MotorType *type;
+	for (i=0; i<MAX_MOTOR; i++)
+	{
+    	type = motors[i].type;
+		angle=RANGLE_DEG(RANGLE_PI2 * (motorImpulseLengths[i] - type->midImpLen) / type->impPi2);
+		printf("Motor %i : %i degrees\r\n", i, angle);
+	}
+}
+
+
+//~~~~~~~~~~ PODS MANGEMENT ~~~~~~~~~~
 
 int pod_setPosition(int x, int y, int z, int time, int motor1, int motor2, int motor3)
 {
 	/* point demande hors zone possible */
 	if (r_sqrt(x*x+y*y+z*z)> LEN1+LEN2+LEN3)
         return FAILURE;
-	int lenM2Tip= r_sqrt(z*z + pow(r_sqrt(x*x + y*y)-LEN1, 2));
+	int lenM2Tip = r_sqrt(z*z + SQUARE(r_sqrt(x*x + y*y)-LEN1));
 	if (lenM2Tip==0)
 	{
 		printf("setPosition error: x:%i, y:%i, z:%i (lenM2Tip=0)\r\n", x, y, z);
@@ -104,18 +285,17 @@ int pod_setPosition(int x, int y, int z, int time, int motor1, int motor2, int m
 	{
 		angle_motor1 = DIRECTION1 * (r_atanD(x, y) + ANGLE1);
 	}
-	int angle_motor3 = DIRECTION3 * (r_acosD(lenM2Tip*lenM2Tip-LEN2*LEN2-LEN3*LEN3, -2*LEN2*LEN3)+ANGLE3);
-	int angle_motor2 = DIRECTION2 * (r_acosD(z, lenM2Tip) + 2048 + r_acosD(LEN3*LEN3-lenM2Tip*lenM2Tip-LEN2*LEN2, -2*lenM2Tip*LEN2) +ANGLE2);
-	//printf("pod_setPosition: lenM2Tip: %i; angle1: %i; angle2: %i; angle3: %i\r\n", lenM2Tip, angle_motor1, angle_motor2, angle_motor3);
-    while (angle_motor1 >  (ANGLE_UNIT-RANGLE_PI4)) angle_motor1-=ANGLE_UNIT;
-	while (angle_motor1 < -(ANGLE_UNIT-RANGLE_PI4)) angle_motor1+=ANGLE_UNIT;
-	while (angle_motor2 >  (ANGLE_UNIT-RANGLE_PI4)) angle_motor2-=ANGLE_UNIT;
-	while (angle_motor2 < -(ANGLE_UNIT-RANGLE_PI4)) angle_motor2+=ANGLE_UNIT;
-	while (angle_motor3 >  (ANGLE_UNIT-RANGLE_PI4)) angle_motor3-=ANGLE_UNIT;
-	while (angle_motor3 < -(ANGLE_UNIT-RANGLE_PI4)) angle_motor3+=ANGLE_UNIT;
-	int res1 = m_setAngle(angle_motor1, motor1, time);
-	int res2 = m_setAngle(angle_motor2, motor2, time);
-	int res3 = m_setAngle(angle_motor3, motor3, time);
+	int angle_motor3 = DIRECTION3 * (r_acosD(SQUARE(lenM2Tip)-LEN2*LEN2-LEN3*LEN3, 
+                  -2*LEN2*LEN3)+ANGLE3);
+	int angle_motor2 = DIRECTION2 * (r_acosD(z, lenM2Tip) + RANGLE_PI2 + 
+                  r_acosD(LEN3*LEN3-lenM2Tip*lenM2Tip-LEN2*LEN2, -2*lenM2Tip*LEN2) +ANGLE2);
+    RANGLE_NORMALIZE(angle_motor1);
+    RANGLE_NORMALIZE(angle_motor2);
+    RANGLE_NORMALIZE(angle_motor3);
+    //printf("pod_setPosition: lenM2Tip: %i; angle1: %i; angle2: %i; angle3: %i\r\n", lenM2Tip, angle_motor1, angle_motor2, angle_motor3);
+	int res1 = m_setAngle_ra(angle_motor1, motor1, time);
+	int res2 = m_setAngle_ra(angle_motor2, motor2, time);
+	int res3 = m_setAngle_ra(angle_motor3, motor3, time);
 	if ( res1==SUCCESS && res2==SUCCESS && res3==SUCCESS )
 		return SUCCESS;
 	else
@@ -125,126 +305,90 @@ int pod_setPosition(int x, int y, int z, int time, int motor1, int motor2, int m
 	}
 }
 
-void show_motors(void)
-{
-	int angle, i;
-	for (i=0; i<MAX_MOTOR; i++)
-	{
-		angle=RANGLE_DEG(RANGLE_PI2*(motorImpulseLengths[i]-ANGLE_0)/D_ANGLE_RPI2)-45;
-		printf("Motor %i : %i degres\r\n", i, angle);
-	}
-}
+
+//~~~~~~~~~~ INTERRUPT MANAGEMENT ~~~~~~~~~~
 
 /*
  the motor active period is set by the timer 3. Period are being set after each other.
  Once all motors have been activited, we wait the end of a global period.
  The motor period is automatically adapted before the impulse depending on the speed.
+ 
+ Two motors are activated together : when a motor is stopped, the other is kept running
+ and a third is started. 
 */
 
 void __ISR(_TIMER_3_VECTOR, ipl4) Timer3Handler(void)
 {
 	// motor control state
-	static int motorIndex = 0;
+	static int motorOn1      = 0;
+	static int motorOn2      = 0;
+	static int motorNext     = 0;
+	static int nextDuration  = MIN_DURATION;
 	static int totalDuration = 0;
-
-    // mPORTDToggleBits(BIT_2);
-    #define MOTOR_MASK 0x3C
-
-    // toggle PortD
-    *(uint32 *)0xBF8860EC = (0x6<<motorIndex)&MOTOR_MASK; // we toggle the previous motor and the next one
-
+	
 	int duration;
-
-	if ((motorIndex>=MAX_MOTOR))
+		
+	// end of loop
+	if (motorNext >= MAX_MOTOR + 2)
 	{
- 		duration = SERVO_MIN_PERIOD-totalDuration;
-      if (duration < 0)
-			duration = MIN_DURATION;
-		motorIndex = 0;
-		totalDuration = 0;
-	}
-	else
-	{
-		if (numberPeriod_toFinal[motorIndex]==0)
-			motorImpulseLengths[motorIndex]=motorImpLenFinal[motorIndex];
-		else
-		{
-			motorImpulseLengths[motorIndex]+=(motorImpLenFinal[motorIndex]-motorImpulseLengths[motorIndex])/numberPeriod_toFinal[motorIndex];
-			numberPeriod_toFinal[motorIndex]--;
-		}
-		duration = motorImpulseLengths[motorIndex];
-		// to save this refresh with historical.h
-		if (numberPeriod_toFinal[motorIndex]!=0)
-			mrefresh_save(motorIndex, duration, numberPeriod_toFinal[motorIndex]);
-		motorIndex++;
-		totalDuration += duration;
-	}
+    	duration = SERVO_MIN_PERIOD - totalDuration;
+    	if (duration < MIN_DURATION)
+    	{
+        	duration = MIN_DURATION;
+        }   	
+        //reinit all statics variables
+    	motorOn1 = MAX_MOTOR;
+    	motorOn2 = MAX_MOTOR;
+    	motorNext = 0;
+    	nextDuration = MIN_DURATION;
+    	totalDuration = 0;
+    }
+    else
+    {
+        //toggle previous motor and next motor
+	    *(motors[motorOn1].toggleRegister) = motors[motorOn1].toggleValue;
+	    *(motors[motorNext].toggleRegister) = motors[motorNext].toggleValue;
+	    // duration for next motor
+	    if (numberPeriod_toFinal[motorNext] == 0)
+	    {
+    	    motorImpulseLengths[motorNext] = motorImpLenFinal[motorNext];
+    	}
+    	else
+    	{
+        	motorImpulseLengths[motorNext] += (motorImpLenFinal[motorNext] - motorImpulseLengths[motorNext]) / numberPeriod_toFinal[motorNext];
+        	numberPeriod_toFinal[motorNext]--;
+        }
+	    // save refresh in the historical
+	    if (numberPeriod_toFinal[motorNext] !=0)
+	    {
+    	    mrefresh_save(motorNext, motorImpulseLengths[motorNext], numberPeriod_toFinal[motorNext]);
+    	}
+    	// select nextDuration and update static values
+    	if (nextDuration <= motorImpulseLengths[motorNext])
+    	{
+        	duration = nextDuration;
+        	nextDuration = motorImpulseLengths[motorNext] - nextDuration;
+        	motorOn1 = motorOn2;
+        	motorOn2 = motorNext;
+        }
+        else
+        {
+            duration = motorImpulseLengths[motorNext];
+            nextDuration -= motorImpulseLengths[motorNext];
+            motorOn1 = motorNext;
+        }
+        motorNext++;
+        totalDuration += duration;
+    }
+    // duration == 0 => timer OFF
+    if (duration < 1)
+    {
+        duration = 1;
+    }
+    
+    OpenTimer3(T3_ON | T3_PS_1_32, duration);
+    
+    //clear the interrupt flag
+    mT3ClearIntFlag();
+}    
 
-	OpenTimer3(T3_ON | T3_PS_1_32, duration);
-
-    // Clear the interrupt flag
-	mT3ClearIntFlag();
-}
-
-
-
-static int setAngle(uint8 *args[], int argc)
-{
-	int motorIdx = atoi(args[1]);
-	int angle=0, time=0;
-	if (argc>2)
-		angle = atoi(args[2]);
-	if (argc>3)
-		time = atoi(args[3]);
-
-	printf("setAngle function %i \r\n", angle);
-	int res = motor_setAngle(angle,motorIdx, time);
-	if (res != SUCCESS)
-	{
-		printf("could not apply requested angle\r\n");
-	}
-	return 0;
-}
-
-static int setPosition(uint8 *args[], int argc)
-{
-	int x=atoi(args[1]);
-	int y=atoi(args[2]);
-	int z=atoi(args[3]);
-	int motor1=0, motor2=1, motor3=2, time=500;
-	if (argc>4)
-	{
-		time = atoi(args[4]);
-	}
-	if (argc>7)
-	{
-		motor1=atoi(args[5]);
-		motor2=atoi(args[6]);
-		motor3=atoi(args[7]);
-	}
-	printf("setPosition fuction %i %i %i, time: %i  \r\n", x, y, z, time);
-	if (pod_setPosition(x, y, z, time, motor1, motor2, motor3)!=SUCCESS)
-		printf("could not apply requested position\r\n");
-	return 0;
-}
-
-static int msetAngle(uint8 *args[], int argc)
-{
-	int motorIdx = atoi(args[1]);
-	int angle = atoi(args[2]);
-	int speed = atoi(args[3]);
-
-	printf("msetAngle function %i \r\n", angle);
-	int res = m_setAngle(angle,motorIdx, speed);
-	if (res != SUCCESS)
-	{
-		printf("could not apply requested angle\r\n");
-	}
-	return 0;
-}
-static int motors_state(uint8 *args[], int argc)
-{
-	printf("motors state:\r\n");
-	show_motors();
-	return 0;
-}

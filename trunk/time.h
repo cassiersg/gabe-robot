@@ -1,7 +1,7 @@
 
 /* TIME FUNCTION
    Time is maintained by Timer2. 
-   Timer 2 is configured to run at 1.125 MHz 
+   Timer 2 is configured to run at 2.25 MHz 
 */
 
 
