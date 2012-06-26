@@ -4,14 +4,14 @@
 #include "basic_types.h"
 #include "robot_math.h"
 
-int motor_init(void);
+void motor_init(void);
 
 void show_motors(void);
 // angles with degrees //time: ms
-int motor_setAngle(int angle, int motorIndex, uint32 time);
+int m_setAngle_deg(int angle, int motorIndex, uint32 time);
 
 // angles : 8192 = 360° //time: ms
-int m_setAngle(int angle, int motorIndex, uint32 time);
+int m_setAngle_ra(int angle, int motorIndex, uint32 time);
 
 
 /* ---------- for pod_setPosition ---------- */

@@ -244,7 +244,7 @@ void process_move(void)
 					int timeInThisState = (seqState->duration)*(movp->timeInThisState)/TOTAL_DUR_FACTOR;
 					for (i=0; i<MAX_MOTOR_CONTROLLED; i++)
 					{
-						motor_setAngle((movp->podPosition.motorAngles)[i],i,timeToState);
+						m_setAngle_deg((movp->podPosition.motorAngles)[i],i,timeToState);
 					}
 					moveState.currentE_type= E_angles;
 					/* decide nextTime */
@@ -267,7 +267,7 @@ void process_move(void)
 					// if previous movement was E_angles or too many recursion level, do as D_direct
 					if (movp->displaceType == D_straight && moveState.currentE_type ==E_coord_xyz && moveState.currentStackLevel < (MAX_RECURSION-1))
 					{
-						int num_points = abs((coord->x-moveState.currentPos.x)/DIS_INTER_POINTS)+1;
+						int num_points = R_ABS((coord->x-moveState.currentPos.x)/DIS_INTER_POINTS)+1;
 						int i;
 						int timeFactor = TOTAL_DUR_FACTOR*(movp->timeToState)/((movp->timeToState + movp->timeInThisState)*num_points);
 						int x= (coord->x - moveState.currentPos.x)/num_points;

@@ -1,7 +1,7 @@
 #include "robot_math.h"
 #include <math.h>
 
-#define RAD_RANGLE(rad) (rad/2/M_PI*ANGLE_UNIT)
+#define RAD_RANGLE(rad) (rad/2/M_PI*RANGLE_UNIT)
 
 int16 r_asinD(int x, int y)
 {

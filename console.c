@@ -146,7 +146,6 @@ void storeCmdInReplayBuf(uint8 *strCmd, int len)
 	if (bufferNext >= REPLAY_LENGTH)
 		bufferNext -= REPLAY_LENGTH;
 
-	int toCopy = bufferNext;
 	int freeSpaceTillEnd = REPLAY_LENGTH-bufferNext;
 	int tempLen = len;
 	if (freeSpaceTillEnd < ((len+1)>>1))
@@ -253,7 +252,7 @@ void console_process(void)
 		if ((newChar == '\n') || (newChar == '\r'))
 		{
 			putsUART("\r\n");
-			putsUART("newLineDetected\r\n");
+			//putsUART("newLineDetected\r\n");
 			
 			// copy the command in the command buffer
 			theCmd[cmdLen-1] = 0; // transform the string in null terminated string 
@@ -436,10 +435,10 @@ static int printHelp(uint8 *args[], int argc)
 			while (12-k >0)
 			{
 				k++;
-				putsUART(" ");
+				printf(" ");
 			}
 			printf("%s", menu[j].theHelp);
-			putsUART("\r\n");
+			printf("\r\n");
 		}
 	}
 	return 0;
