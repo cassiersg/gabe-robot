@@ -8,7 +8,7 @@
 #include "robot_console.h"
 #include "historical.h"
 
-#define MAX_MOTOR 4
+#define MAX_MOTOR 12
 
 #define SERVO_MIN_PERIOD (TICKS_PER_MSEC *18)  // 18 msecs
 #define MIN_DURATION     100 // min wait time
@@ -67,10 +67,18 @@ struct Amotor
 };
 
 Amotor motors[MAX_MOTOR+2] = {
+    {&darkMotor, PORT_D_INV, 1<<1},
     {&darkMotor, PORT_D_INV, 1<<2},
-    {&darkMotor, PORT_D_INV, 1<<3},
-    {&blueMotor, PORT_D_INV, 1<<4},
-    {&blueMotor, PORT_D_INV, 1<<5},
+    {&blueMotor, PORT_D_INV, 1<<3},
+    {&darkMotor, PORT_D_INV, 1<<4},
+    {&darkMotor, PORT_D_INV, 1<<5},
+    {&blueMotor, PORT_D_INV, 1<<6},
+    {&darkMotor, PORT_D_INV, 1<<7},
+    {&darkMotor, PORT_E_INV, 1<<0},
+    {&blueMotor, PORT_E_INV, 1<<1},
+    {&darkMotor, PORT_E_INV, 1<<2},
+    {&darkMotor, PORT_E_INV, 1<<3},
+    {&blueMotor, PORT_E_INV, 1<<4},
     {&noneMotor, &nullVar,   0},
     {&noneMotor, &nullVar,   0},
 };
@@ -189,7 +197,9 @@ void motor_init(void)
         numberPeriod_toFinal[i] = 0;
     }
     
-	// motor is mapped on RD2. set it to low
+	// set pins (ports RD and RE)
+	PORTSetPinsDigitalOut(IOPORT_D, BIT_1);
+    mPORTDClearBits(BIT_1);
     PORTSetPinsDigitalOut(IOPORT_D, BIT_2);
     mPORTDClearBits(BIT_2);
 	PORTSetPinsDigitalOut(IOPORT_D, BIT_3);
@@ -198,6 +208,20 @@ void motor_init(void)
     mPORTDClearBits(BIT_4);
 	PORTSetPinsDigitalOut(IOPORT_D, BIT_5);
     mPORTDClearBits(BIT_5);
+    PORTSetPinsDigitalOut(IOPORT_D, BIT_6);
+    mPORTDClearBits(BIT_6);
+    PORTSetPinsDigitalOut(IOPORT_D, BIT_7);
+    mPORTDClearBits(BIT_7);
+    PORTSetPinsDigitalOut(IOPORT_E, BIT_0);
+    mPORTEClearBits(BIT_0);
+    PORTSetPinsDigitalOut(IOPORT_E, BIT_1);
+    mPORTEClearBits(BIT_1);
+    PORTSetPinsDigitalOut(IOPORT_E, BIT_2);
+    mPORTEClearBits(BIT_2);
+    PORTSetPinsDigitalOut(IOPORT_E, BIT_3);
+    mPORTEClearBits(BIT_3);
+    PORTSetPinsDigitalOut(IOPORT_E, BIT_4);
+    mPORTEClearBits(BIT_4);
 
 	// once the port is correctly configured, start the timer
 	// and configure the associated interrupt
@@ -327,10 +351,11 @@ void __ISR(_TIMER_3_VECTOR, ipl4) Timer3Handler(void)
 	static int totalDuration = 0;
 	
 	int duration;
-		
+    
 	// end of loop
-	if (motorNext >= MAX_MOTOR + 2)
+    if (motorNext == MAX_MOTOR + 1)
 	{
+    	*(motors[motorOn1].toggleRegister) = motors[motorOn1].toggleValue;
     	duration = SERVO_MIN_PERIOD - totalDuration;
     	if (duration < MIN_DURATION)
     	{
@@ -348,6 +373,7 @@ void __ISR(_TIMER_3_VECTOR, ipl4) Timer3Handler(void)
         //toggle previous motor and next motor
 	    *(motors[motorOn1].toggleRegister) = motors[motorOn1].toggleValue;
 	    *(motors[motorNext].toggleRegister) = motors[motorNext].toggleValue;
+	    
 	    // duration for next motor
 	    if (numberPeriod_toFinal[motorNext] == 0)
 	    {
@@ -363,8 +389,9 @@ void __ISR(_TIMER_3_VECTOR, ipl4) Timer3Handler(void)
 	    {
     	    mrefresh_save(motorNext, motorImpulseLengths[motorNext], numberPeriod_toFinal[motorNext]);
     	}
+
     	// select nextDuration and update static values
-    	if (nextDuration <= motorImpulseLengths[motorNext])
+    	if (nextDuration <= motorImpulseLengths[motorNext] || motorNext == MAX_MOTOR)
     	{
         	duration = nextDuration;
         	nextDuration = motorImpulseLengths[motorNext] - nextDuration;
