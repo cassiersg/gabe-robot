@@ -16,11 +16,11 @@ int m_setAngle_ra(int angle, int motorIndex, uint32 time);
 
 /* ---------- for pod_setPosition ---------- */
 // distance between motor1 and motor2 (mm)
-#define LEN1 23
+#define LEN1 22
 // distance between motor2 and motor3 (mm)
-#define LEN2 71
+#define LEN2 73
 //distance between motor3 and the tip (mm)
-#define LEN3 80
+#define LEN3 78
 
 //correction angle motor 1
 #define ANGLE1 DEG_RANGLE( 0 )
@@ -30,9 +30,9 @@ int m_setAngle_ra(int angle, int motorIndex, uint32 time);
 #define ANGLE3 DEG_RANGLE( -70 )
 
 //directions motors (-1 or 1)
-#define DIRECTION1 1 
-#define DIRECTION2 -1
-#define DIRECTION3 1
+#define DIRECTION1 -1 
+#define DIRECTION2 1
+#define DIRECTION3 -1
 
 /*
 amène l extrémité d une patte au point désigné
@@ -50,6 +50,6 @@ x, y, z en mm
 
 time: seconds from the call of the fuction
 */
-int pod_setPosition(int x, int y, int z, int time, int motor1, int motor2, int motor3);
+int pod_setPosition(int x, int y, int z, int time, int podIdx);
 
 #endif

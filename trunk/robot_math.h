@@ -6,6 +6,8 @@
 #define SQUARE(x) ((x)*(x))
 #define R_ABS(x)  ((x)>=0 ? (x) : (-(x)))
 
+#define R_SQRT_2_8 362
+
 /*
 This is a specific math-library with integers.
 The angles are between 0 (=0rad) and 8191 (8192= 2*pi rad ): Name of this unit r_angle
