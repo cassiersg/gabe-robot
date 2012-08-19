@@ -3,9 +3,9 @@
 
 #include "basic_types.h"
 
-void process_move(void);
 void move_init(void);
 
+void process_move(void);
 
 #endif
 

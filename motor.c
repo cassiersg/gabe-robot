@@ -9,6 +9,7 @@
 #include "historical.h"
 
 #define MAX_MOTOR 12
+#define NB_PODS   4
 
 #define SERVO_MIN_PERIOD (TICKS_PER_MSEC *18)  // 18 msecs
 #define MIN_DURATION     100 // min wait time
@@ -82,6 +83,21 @@ Amotor motors[MAX_MOTOR+2] = {
     {&noneMotor, &nullVar,   0},
     {&noneMotor, &nullVar,   0},
 };
+
+typedef struct Apod Apod;
+struct Apod
+{
+    int m1Idx;
+    int m2Idx;
+    int m3Idx;
+};
+
+Apod pods[NB_PODS] = {
+      { 0,  1,  2},
+      { 3,  4,  5},
+      { 6,  7,  8},
+      { 9, 10, 11},
+};      
 
 int motorImpLenFinal[MAX_MOTOR+3] = {0};
 int motorImpulseLengths[MAX_MOTOR+3] = {0};
@@ -159,19 +175,17 @@ static int c_setPosition(uint8 *args[], int argc)
 	int x=atoi(args[1]);
 	int y=atoi(args[2]);
 	int z=atoi(args[3]);
-	int motor1=0, motor2=1, motor3=2, time=500;
+	int time=500, podIdx=0;
 	if (argc>4)
 	{
 		time = atoi(args[4]);
     }
-	if (argc>7)
+	if (argc>5)
 	{
-		motor1=atoi(args[5]);
-		motor2=atoi(args[6]);
-		motor3=atoi(args[7]);
+		podIdx=atoi(args[5]);
 	}
 	printf("setPosition fuction %i %i %i, time: %i  \r\n", x, y, z, time);
-	if (pod_setPosition(x, y, z, time, motor1, motor2, motor3)!=SUCCESS)
+	if (pod_setPosition(x, y, z, time, podIdx)!=SUCCESS)
 		printf("could not apply requested position\r\n");
 	return 0;
 }
@@ -289,7 +303,7 @@ void show_motors(void)
 
 //~~~~~~~~~~ PODS MANGEMENT ~~~~~~~~~~
 
-int pod_setPosition(int x, int y, int z, int time, int motor1, int motor2, int motor3)
+int pod_setPosition(int x, int y, int z, int time, int podIdx)
 {
 	/* point demande hors zone possible */
 	if (r_sqrt(x*x+y*y+z*z)> LEN1+LEN2+LEN3)
@@ -317,9 +331,9 @@ int pod_setPosition(int x, int y, int z, int time, int motor1, int motor2, int m
     RANGLE_NORMALIZE(angle_motor2);
     RANGLE_NORMALIZE(angle_motor3);
     //printf("pod_setPosition: lenM2Tip: %i; angle1: %i; angle2: %i; angle3: %i\r\n", lenM2Tip, angle_motor1, angle_motor2, angle_motor3);
-	int res1 = m_setAngle_ra(angle_motor1, motor1, time);
-	int res2 = m_setAngle_ra(angle_motor2, motor2, time);
-	int res3 = m_setAngle_ra(angle_motor3, motor3, time);
+	int res1 = m_setAngle_ra(angle_motor1, pods[podIdx].m1Idx, time);
+	int res2 = m_setAngle_ra(angle_motor2, pods[podIdx].m2Idx, time);
+	int res3 = m_setAngle_ra(angle_motor3, pods[podIdx].m3Idx, time);
 	if ( res1==SUCCESS && res2==SUCCESS && res3==SUCCESS )
 		return SUCCESS;
 	else
