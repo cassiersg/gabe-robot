@@ -48,10 +48,10 @@ Amov nullMove[] = {
 };    
 
 Amov firstSeq[]  = {
-	{ 1, {-50, 80, 35}, E_coord_xyz, D_straight },
-	{ 1, { 50, 80, 35}, E_coord_xyz, D_straight },
-	{ 2, {  0,  0,  0}, E_null, D_direct},
-	{ 1, {-50, 80, 35}, E_coord_xyz, D_straight},
+	{ 1, { 40,  90, 25}, E_coord_xyz, D_straight },
+	{ 2, { 40, -10, 25}, E_coord_xyz, D_straight },
+	{ 1, {  0,   0,  0}, E_null, D_direct},
+	{ 2, {100, 100, 25}, E_coord_xyz, D_straight},
 	{-1, {  0,  0,  0}, E_coord_xyz, D_direct },
 };
 
@@ -126,7 +126,7 @@ struct AGlobalMove
 };
 
 AGlobalMove firstGMove[] = {
-    { 4000, seqEntry1, seqEntry1, seqEntry1, seqEntry1},
+    { 4000, seqEntry1, nullSeq, nullSeq, nullSeq},
     {-1, NULL, NULL, NULL, NULL},
 };
 
