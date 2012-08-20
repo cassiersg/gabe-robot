@@ -20,6 +20,8 @@ static void m_setAngle_imp(int impulseLength, int motorIndex, uint32 time);
 static int  m_testRAngle(int angle, int motorIndex);
 static void m_setAngle_ra_noTest(int angle, int motorIndex, uint32 time);
 
+static void std_position(int *x, int *y, int *z, int podIdx);
+
 static int c_setAngle_ra(uint8 *args[], int argc);
 static int c_setAngle_deg(uint8 *args[], int argc);
 static int c_setAngle_imp(uint8 *args[], int argc);
@@ -303,8 +305,35 @@ void show_motors(void)
 
 //~~~~~~~~~~ PODS MANGEMENT ~~~~~~~~~~
 
+static void std_position(int *x, int *y, int *z, int podIdx)
+{
+    int v_x, v_y;
+    switch (podIdx)
+    {
+        case 0:
+            v_x = *x - *y;
+            v_y = *x + *y;
+            break;
+        case 1:
+            v_x = -*x - *y;
+            v_y = *x - *y;
+            break;
+        case 2:
+            v_x = *x + *y;
+            v_y = *x - *y;
+            break;
+        case 3:
+            v_x = *y - *x;
+            v_y = *x + *y;
+            break;
+    }
+    *x = (v_x << 8) / R_SQRT_2_8;
+    *y = (v_y << 8) / R_SQRT_2_8;
+}        
+
 int pod_setPosition(int x, int y, int z, int time, int podIdx)
 {
+    std_position(&x, &y, &z, podIdx);
 	/* point demande hors zone possible */
 	if (r_sqrt(x*x+y*y+z*z)> LEN1+LEN2+LEN3)
         return FAILURE;
