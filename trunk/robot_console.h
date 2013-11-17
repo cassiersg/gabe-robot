@@ -32,10 +32,10 @@
 typedef struct CmdEntry CmdEntry;
 struct CmdEntry
 {
-	uint8 *theCmd;
-	int (*processingFunction)(uint8 *args[], int argc);
+	char *theCmd;
+	int (*processingFunction)(char *args[], int argc);
 	uint8 minArgs;
-	uint8 *theHelp;
+	char *theHelp;
 };
 
 

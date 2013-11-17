@@ -7,8 +7,8 @@
 #include "robot_console.h"
 #include "robot_time.h"
 
-static int  his_setSate(uint8 *args[], int argc);
-static int  historic_show(uint8 *args[], int argc);
+static int  his_setSate(char *args[], int argc);
+static int  historic_show(char *args[], int argc);
 CmdEntry histConsoleMenu[] = {
 	{ "sstatehis",   his_setSate,    2, "historical set state <state: 0/1>"},
 	{ "histshow",    historic_show,  1, "history of events"},
@@ -39,7 +39,7 @@ typedef struct event event;
 struct event
 {
 	uint32 time;
-	uint8 event[E_STRLEN];
+	char event[E_STRLEN];
 	int parameters[PAR_NUM];
 };
 event eventTable[N_EVENT_SAVED];
@@ -77,7 +77,7 @@ void mrefresh_save(uint8 motorIndex, int impLen, int perToFinal)
 	}
 }
 
-void event_save(uint8 *event, ...)
+void event_save(char *event, ...)
 {
 	if (eventSave==TRUE)
 	{
@@ -180,7 +180,7 @@ void showHistorical(void)
 
 
 
-static int  his_setSate(uint8 *args[], int argc)
+static int  his_setSate(char *args[], int argc)
 {
 	int state = atoi(args[1]);
 	setState_eSave(state);
@@ -191,7 +191,7 @@ static int  his_setSate(uint8 *args[], int argc)
 	return 0;
 }
 
-static int  historic_show(uint8 *args[], int argc)
+static int  historic_show(char *args[], int argc)
 {
 	showHistorical();
 	return 0;
