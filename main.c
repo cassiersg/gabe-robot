@@ -85,8 +85,6 @@ int main(void)
 	// Time delay  => was inside the inital example - do not know why:::
 	i = 512*512;		
 	while(i) {i--;}
-	
-	uint32 t0;
 
 	// Send 'Hello' message through RS232
     putsUART("\n*** WELCOME TO THE ROBOT'S WORLD ***\r\n");

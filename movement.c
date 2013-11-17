@@ -5,6 +5,7 @@
 #include "motor_control.h"
 #include "robot_console.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 
 /* ~~~~~~~~~~ POD MOVE TYPES DECLARATIONS ~~~~~~~~~~ */
@@ -73,13 +74,13 @@ struct SeqEntry
 };
 
 SeqEntry nullSeq[] = {
-    { E_MovSeq, nullMove, 1},
-    { E_lastEntry, NULL, 0},
+    { E_MovSeq, {nullMove}, 1},
+    { E_lastEntry, {NULL}, 0},
 };    
 
 SeqEntry seqEntry1[] = {
-{E_MovSeq,    firstSeq,  1 },
-{E_lastEntry, NULL,      0 },
+{E_MovSeq,    {firstSeq},  1 },
+{E_lastEntry, {NULL},      0 },
 };
 
 #define MAX_RECURSION 5
@@ -126,8 +127,8 @@ struct AGlobalMove
 };
 
 AGlobalMove firstGMove[] = {
-    { 4000, seqEntry1, nullSeq, nullSeq, nullSeq},
-    {-1, NULL, NULL, NULL, NULL},
+    { 4000, {seqEntry1, nullSeq, nullSeq, nullSeq}},
+    {-1, {NULL, NULL, NULL, NULL}},
 };
 
 typedef struct GMovesQueue GMovesQueue;
@@ -143,9 +144,9 @@ GMovesQueue gMovesQueue = {0, 0, 0};
 
 AGlobalMove *gMoves[NB_GMOVES] = {firstGMove };
 
-static int c_addGMove(uint8 *args[], int argc);
-static int c_showGMove(uint8 *args[], int argc);
-static int c_showStacks(uint8 *args[], int argc);
+static int c_addGMove(char *args[], int argc);
+static int c_showGMove(char *args[], int argc);
+static int c_showStacks(char *args[], int argc);
 
 static void stack_init(MoveState *stack, SeqEntry *initSeq, int totalDuration, int podIdx);
 static void stacks_init(SeqEntry *initSeq[4], int totalDuration);
@@ -167,7 +168,7 @@ CmdEntry movementConsoleMenu[] = {
     { NULL, NULL, 0, NULL},
 };
 
-static int c_addGMove(uint8 *args[], int argc)
+static int c_addGMove(char *args[], int argc)
 {
     AGlobalMove *gMove = gMoves[0];
     if (argc > 1)
@@ -186,13 +187,13 @@ static int c_addGMove(uint8 *args[], int argc)
     return 0;
 }    
 
-static int c_showGMove(uint8 *args[], int argc)
+static int c_showGMove(char *args[], int argc)
 {
     show_gMovesQueue();
     return 0;
 }    
 
-static int c_showStacks(uint8 *args[], int argc)
+static int c_showStacks(char *args[], int argc)
 {
     int i;
     printf("StackState:\r\n");
@@ -201,6 +202,7 @@ static int c_showStacks(uint8 *args[], int argc)
         printf("--- pod %i ---\r\n", i);
         stackState(&moveStates[i]);
     }
+    return SUCCESS;
 }
 
 /* ~~~~~~~~~~ INIT ~~~~~~~~~~ */
@@ -439,7 +441,7 @@ static void stackState(MoveState *stack)
 	{
 		SeqState *curSeq = &stack->seqStack[i];
 		printf("   STACK LEVEL %i\r\n", i);
-		printf("      sequence:%p\r\n", curSeq->seq);
+		printf("      sequence:%p\r\n", curSeq->seq.seq);
 		printf("      cur index:%i\r\n", curSeq->seqIndex);
 		printf("      duration:%i\r\n", curSeq->duration);
 		if (curSeq->seq.moveSeq == stack->interMoves)

@@ -5,9 +5,9 @@
 
 
 /* local functions */
-static int  splitCmd(uint8 *theCmd, uint8 *args[], int maxArg);
-static int  printHelp(uint8 *args[], int argc);
-static void processCmd(uint8 *theCmd, int cmdLen);
+static int  splitCmd(char *theCmd, char *args[], int maxArg);
+static int  printHelp(char *args[], int argc);
+static void processCmd(char *theCmd, int cmdLen);
 
 /* cmd entry is the basic element used to
    construct the menu list
@@ -25,7 +25,7 @@ int numberOfMenu = 0;
 
 /* maximum number of char in one command */
 #define MAX_CMD_LEN 512
-uint8 theCmd[MAX_CMD_LEN];
+char theCmd[MAX_CMD_LEN];
 int cmdLen = 0;
 int totalStr = 0;
 
@@ -84,7 +84,7 @@ int bufferNext = 0;
 int bufferFirst= 0;
 int bufferPointer = 0;
 
-void storeCmdInReplayBuf(uint8 *strCmd, int len)
+void storeCmdInReplayBuf(char *strCmd, int len)
 {
 	// to be completed. We should check whether the new command is the same as the last one
 	{
@@ -97,7 +97,7 @@ void storeCmdInReplayBuf(uint8 *strCmd, int len)
 		if (lastLen == len)
 		{
 			int cmdIsDifferent = 0;
-			uint8 *tempNewCmd = strCmd;
+			char *tempNewCmd = strCmd;
 			lastCmd -= (lastLen+1)>>1;
 			if (lastCmd < 0)
 				lastCmd += REPLAY_LENGTH;
@@ -168,7 +168,7 @@ void storeCmdInReplayBuf(uint8 *strCmd, int len)
 }
 
 // return true if a new command has been copied
-int movePointer(uint8 *strCmd, int *len, int isUp /* go to a previous command */)
+int movePointer(char *strCmd, int *len, int isUp /* go to a previous command */)
 {
 	/* if move is possble copy newly pointed command in the strCmd, len */
 	int copyFrom = -1; /* offset of the comman to copy -1 indicates no copy possible */
@@ -231,7 +231,7 @@ void console_processCmd(char *cmd)
 }
 
 #define CONSOLE_BUF_LEN 256
-uint8 consoleBuffer[CONSOLE_BUF_LEN];
+char consoleBuffer[CONSOLE_BUF_LEN];
 volatile int buffWrite = 0;
 volatile int buffRead = 0;
 
@@ -240,7 +240,7 @@ void console_process(void)
 {
 	if (buffWrite != buffRead)
 	{
-       	uint8 newChar = (char)consoleBuffer[buffRead++]; // Read data from Rx.
+       	char newChar = (char)consoleBuffer[buffRead++]; // Read data from Rx.
 		if (buffRead >= CONSOLE_BUF_LEN)
 			buffRead = 0;
  		theCmd[cmdLen] = newChar;
@@ -268,13 +268,13 @@ void console_process(void)
 			// we could avoid this by never xaiting more than x msecs.
 			while (buffRead == buffWrite)
 				;
-			uint8 secondChar = (char)consoleBuffer[buffRead++]; // Read data from Rx.
+			char secondChar = (char)consoleBuffer[buffRead++]; // Read data from Rx.
 			if (buffRead >= CONSOLE_BUF_LEN)
 				buffRead = 0;
 
 			while (buffRead == buffWrite)
 				;
-			uint8 thirdChar = (char)consoleBuffer[buffRead++]; // Read data from Rx.
+			char thirdChar = (char)consoleBuffer[buffRead++]; // Read data from Rx.
 			if (buffRead >= CONSOLE_BUF_LEN)
 				buffRead = 0;
 
@@ -327,7 +327,7 @@ void console_process(void)
 	The function returns -1 is there are more args than allowed.
 	"theCmd" must be null terminated
 */
-static int splitCmd(uint8 *theCmd, uint8 *args[], int maxArg)
+static int splitCmd(char *theCmd, char *args[], int maxArg)
 {
 	int nextArg = 0;
 	int idx = 0;
@@ -336,7 +336,7 @@ static int splitCmd(uint8 *theCmd, uint8 *args[], int maxArg)
 	#define SEARCH_END 1
 
 	int state = SEARCH_START;
-	uint8 nextChar = theCmd[0];
+	char nextChar = theCmd[0];
 	while (nextChar != 0)
 	{
 		if ((state==SEARCH_START) && (nextChar != ' '))
@@ -373,9 +373,9 @@ static int splitCmd(uint8 *theCmd, uint8 *args[], int maxArg)
 }
 
 
-static void processCmd(uint8 *theCmd, int cmdLen)
+static void processCmd(char *theCmd, int cmdLen)
 {
-	uint8 *args[MAX_ARG];
+	char *args[MAX_ARG];
 	if (cmdLen > 1)
 	{
 		//printf("(%s)\n\r",theCmd);
@@ -420,7 +420,7 @@ static void processCmd(uint8 *theCmd, int cmdLen)
 }
 
 
-static int printHelp(uint8 *args[], int argc)
+static int printHelp(char *args[], int argc)
 {
 	putsUART("this is the main help function \r\n");
 	putsUART("commands:\r\n\r\n");
@@ -453,7 +453,7 @@ void __ISR(_UART_VECTOR, ipl3) IntUartConsoleHandler(void)
 	{
 		// Clear the RX interrupt Flag
 	    mURXClearIntFlag();
-		uint8 theChar = ReadUART();
+		char theChar = ReadUART();
 		consoleBuffer[buffWrite++] = theChar;
 		if (buffWrite >= CONSOLE_BUF_LEN)
 			buffWrite = 0;

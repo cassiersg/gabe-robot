@@ -5,7 +5,7 @@
 
 void historical_init(void);
 void mrefresh_save(uint8 motorIndex, int impLen, int perToFinal);
-void event_save(uint8 *event, ...);
+void event_save(char *event, ...);
 
 void resetHistory(void);
 void setState_eSave(int state);

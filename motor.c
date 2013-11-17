@@ -22,11 +22,11 @@ static void m_setAngle_ra_noTest(int angle, int motorIndex, uint32 time);
 
 static void std_position(int *x, int *y, int *z, int podIdx);
 
-static int c_setAngle_ra(uint8 *args[], int argc);
-static int c_setAngle_deg(uint8 *args[], int argc);
-static int c_setAngle_imp(uint8 *args[], int argc);
-static int c_setPosition(uint8 *args[], int argc);
-static int c_motors_state(uint8 *args[], int argc);
+static int c_setAngle_ra(char *args[], int argc);
+static int c_setAngle_deg(char *args[], int argc);
+static int c_setAngle_imp(char *args[], int argc);
+static int c_setPosition(char *args[], int argc);
+static int c_motors_state(char *args[], int argc);
 
 
 //~~~~~~~~~~ MOTORS STATE ~~~~~~~~~~
@@ -119,7 +119,7 @@ CmdEntry motorConsoleMenu[] = {
 	{ NULL,       NULL,      0, NULL},
 };
 
-static int c_setAngle_imp(uint8 *args[], int argc)
+static int c_setAngle_imp(char *args[], int argc)
 {
     int motorIdx = atoi(args[1]);
     int angle=0, time=100;
@@ -134,7 +134,7 @@ static int c_setAngle_imp(uint8 *args[], int argc)
     return 0;
 }
 
-static int c_setAngle_ra(uint8 *args[], int argc)
+static int c_setAngle_ra(char *args[], int argc)
 {
 	int motorIdx = atoi(args[1]);
 	int angle=0, time=100;
@@ -152,7 +152,7 @@ static int c_setAngle_ra(uint8 *args[], int argc)
 	return 0;
 }
 
-static int c_setAngle_deg(uint8 *args[], int argc)
+static int c_setAngle_deg(char *args[], int argc)
 {
     int motorIdx = atoi(args[1]);
     int angle=0, time=100;
@@ -172,7 +172,7 @@ static int c_setAngle_deg(uint8 *args[], int argc)
 }
 
 
-static int c_setPosition(uint8 *args[], int argc)
+static int c_setPosition(char *args[], int argc)
 {
 	int x=atoi(args[1]);
 	int y=atoi(args[2]);
@@ -192,7 +192,7 @@ static int c_setPosition(uint8 *args[], int argc)
 	return 0;
 }
 
-static int c_motors_state(uint8 *args[], int argc)
+static int c_motors_state(char *args[], int argc)
 {
     printf("motors state:\r\n");
     show_motors();
