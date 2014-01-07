@@ -4,10 +4,10 @@
  * 			OLIMEX PIC-32MX TEST
  *********************************************************************
  *
- * This file is the main file of q progrqm intended to control servo
+ * This file is the main file of a progrqm intended to control servo
  * which will be assembled together to form a robot
  * 
- * The servo are connected on RD0 .. RD3
+ * The servo are connected on RD0 .. RD7; RE0 .. RE4
  * The program also control a LED through RF1
  *
  * timer2 is used to give a time information
@@ -35,6 +35,7 @@
 #include "robot_time.h"
 #include "robot_console.h"
 #include "motor_control.h"
+#include "pod_control.h"
 #include "status_led.h"
 #include "historical.h"
 #include "movement.h"
@@ -81,11 +82,12 @@ int main(void)
 	motor_init();
     historical_init();
 	move_init();
+    pod_init();
 
 	// Time delay  => was inside the inital example - do not know why:::
 	i = 512*512;		
 	while(i) {i--;}
-
+	
 	// Send 'Hello' message through RS232
     putsUART("\n*** WELCOME TO THE ROBOT'S WORLD ***\r\n");
     putsUART("*** Type help is needed ***\r\n");

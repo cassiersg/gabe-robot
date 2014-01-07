@@ -1,12 +1,13 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include "basic_types.h"
 #include "movement.h"
 #include "robot_time.h"
 #include "historical.h"
 #include "motor_control.h"
 #include "robot_console.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
+#include "robot_math.h"
+#include "pod_control.h"
 
 /* ~~~~~~~~~~ POD MOVE TYPES DECLARATIONS ~~~~~~~~~~ */
 
@@ -344,7 +345,7 @@ static ProcessMoveState processPod_move(MoveState *stack)
 					// if too many recursion level, do as D_direct
 					if (movp->displaceType == D_straight && stack->currentE_type ==E_coord_xyz && stack->currentStackLevel < (MAX_RECURSION-1))
 					{
-						int num_points = R_ABS((coord->x - stack->currentPos.x) / DIS_INTER_POINTS) + 1;
+						int num_points = abs((coord->x - stack->currentPos.x) / DIS_INTER_POINTS) + 1;
 						int i;
 						int timeFactor = TOTAL_DUR_FACTOR / num_points;
 						int x= (coord->x - stack->currentPos.x)/num_points;
