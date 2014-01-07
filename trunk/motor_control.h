@@ -2,54 +2,27 @@
 #define MOTOR_CONTROL_H
 
 #include "basic_types.h"
-#include "robot_math.h"
 
+
+/* Must be called one (and only one) time before any use of motors. */
 void motor_init(void);
 
-void show_motors(void);
-// angles with degrees //time: ms
-int m_setAngle_deg(int angle, int motorIndex, uint32 time);
 
-// angles : 8192 = 360° //time: ms
-int m_setAngle_ra(int angle, int motorIndex, uint32 time);
+/* Return SUCCESS if the given angle is valid for the motor
+ *
+ * angle : Rangle
+ */
+int testMotor(int angle, unsigned int motorIdx);
 
 
-/* ---------- for pod_setPosition ---------- */
-// distance between motor1 and motor2 (mm)
-#define LEN1 22
-// distance between motor2 and motor3 (mm)
-#define LEN2 73
-//distance between motor3 and the tip (mm)
-#define LEN3 78
+/* Set the motor <motorIdx> to the <angle> position.
+ * The mouvement last <duration>.
+ * Return FAILURE if the requested angle cannot be applied, else return SUCCESS
+ *
+ * angle : RAngle
+ * duration : ms
+ */
+int setMotor(int angle, unsigned int motorIdx, uint32 duration);
 
-//correction angle motor 1
-#define ANGLE1 DEG_RANGLE( 0 )
-//correction angle motor 2
-#define ANGLE2 DEG_RANGLE( 150 )
-//correction angle motor 3
-#define ANGLE3 DEG_RANGLE( -70 )
 
-//directions motors (-1 or 1)
-#define DIRECTION1 -1 
-#define DIRECTION2 1
-#define DIRECTION3 -1
-
-/*
-amène l extrémité d une patte au point désigné
-centre du repère: axe du moteur1;
-x: horizontal, perpendiculaire au premier segment quand angle moteur1 = 0, sens: vers la droite en regardant du centre du robot;
-y: horizontal, vers l'extérieur du robot;
-z: vertical, vers le bas.
-numéros de moteurs: du centre vers l'extrémité de la patte, SELON LE MODELE POSTE : v1
-longueur des segments : LEN1 LEN2 LEN3, centre->extrémité
-moteur1: croissant vers la droite (en regardant du centre du robot) ANGLE1 0  DIRECTION1 1
-moteur2: position "0" a 45° vers le bas, augmentation vers le haut  ANGLE2 -135  DIRECTION2 1
-moteur3: position "0" vertical, augmentation vers l exterieur  ANGLE3 -135  DIRECTION3 -1
-!!! y>0 ; z>0
-x, y, z en mm
-
-time: seconds from the call of the fuction
-*/
-int pod_setPosition(int x, int y, int z, int time, int podIdx);
-
-#endif
+#endif // MOTOR_CONTROL_H
